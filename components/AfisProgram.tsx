@@ -23,12 +23,7 @@ const AfisProgram = () => {
   };
 
 
-  // Helper function to save data to the URL
-  const saveDataToUrl = (key: string, value: string) => {
-    const queryParams = new URLSearchParams(window.location.search);
-    queryParams.set(key, value);
-    router.replace(`?${queryParams.toString()}`, undefined, { shallow: true });
-  };
+
 
   // Helper function to read data from the URL
   const readDataFromUrl = (key: string): string | null => {
