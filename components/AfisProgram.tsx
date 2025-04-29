@@ -1,10 +1,27 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from 'next/router';
+import { useRouter } from "next/router";
 
 const AfisProgram = () => {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true); // Ensures the component runs only on the client side
+  }, []);
+
+  if (!isClient) {
+    return null; // Avoid rendering on the server
+  }
+
   const router = useRouter();
+
+  const saveDataToUrl = (key: string, value: string) => {
+    const queryParams = new URLSearchParams(window.location.search);
+    queryParams.set(key, value);
+    router.replace(`?${queryParams.toString()}`, undefined, { shallow: true });
+  };
+
 
   // Helper function to save data to the URL
   const saveDataToUrl = (key: string, value: string) => {
