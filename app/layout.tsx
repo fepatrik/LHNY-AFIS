@@ -17,7 +17,7 @@ export default function RootLayout({
           padding: "20px",
           backgroundImage: `url("/bg.jpg")`,
           backgroundAttachment: "fixed",
-          backgroundSize: "auto",
+          backgroundSize: "cover", // kitölti a képernyőt, megtartva az arányokat
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
           boxSizing: "border-box",
