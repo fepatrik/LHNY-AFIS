@@ -398,7 +398,7 @@ const renderAircraft = (
                 type="text"
                 value={localIRDetails[reg]?.clearance || ""}
                 onChange={(e) => handleLocalIRChange(reg, 'clearance', e.target.value)}
-                placeholder="Clearance"
+                placeholder="Feladat"
                 style={{
                   padding: `${uiScale * 6}px`,
                   borderRadius: `${uiScale * 6}px`,
@@ -547,8 +547,8 @@ const renderAircraft = (
  <Container>
  <Section title={`Local IR (${localIR.length})`}>
     {renderAircraft(localIR, [
-      { label: "Joining Visual Circuit", onClick: moveToVisualCircuitFromLocalIR },
-      { label: "Proceed to Training Box", onClick: openTrainingBoxModal },
+      { label: "Joining VC", onClick: moveToVisualCircuitFromLocalIR },
+      { label: "To Training Box", onClick: openTrainingBoxModal },
     ])}
   </Section>
 
@@ -556,8 +556,8 @@ const renderAircraft = (
   {renderAircraft(
     Object.keys(trainingBox),
     [
-      { label: "Joining Visual Circuit", onClick: moveToVisualFromTrainingBox },
-      { label: "Proceed to Local IR", onClick: moveToLocalIRFromTrainingBox } // Update this line
+      { label: "Joining VC", onClick: moveToVisualFromTrainingBox },
+      { label: "To Local IR", onClick: moveToLocalIRFromTrainingBox } // Update this line
     ]
   )}
 </Section>
@@ -566,9 +566,9 @@ const renderAircraft = (
       <Section title={`Visual Circuit (${visualCircuit.length})`}>
         {renderAircraft(visualCircuit, [
           { label: "Runway Vacated", onClick: moveToTaxiingFromVisual },
-          { label: "Proceed to TB", onClick: openModal },
-          { label: "Proceed to Local IR", onClick: moveToLocalIR },
-          { label: "Proceed to Cross Country", onClick: moveToCrossCountry }
+          { label: "To TB", onClick: openModal },
+          { label: "To Local IR", onClick: moveToLocalIR },
+          { label: "To Cross Country", onClick: moveToCrossCountry }
         ])}
       </Section>
 
