@@ -1,184 +1,154 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router";
 
 const AfisProgram = () => {
-  const [isClient, setIsClient] = useState(false);
-  const router = useRouter();
-
-  // Ensure the component runs only on the client side
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return null; // Prevent rendering on the server
-  }
-
-  // Helper function to save data to the URL
-  const saveDataToUrl = (key: string, value: string) => {
-    const queryParams = new URLSearchParams(window.location.search);
-    queryParams.set(key, value);
-    router.replace(`?${queryParams.toString()}`, undefined, { shallow: true });
-  };
-
-  // Helper function to read data from the URL
-  const readDataFromUrl = (key: string): string | null => {
-    const queryParams = new URLSearchParams(window.location.search);
-    return queryParams.get(key);
-  };
-
-  // State initialization with default values
-  const [taxiing, setTaxiing] = useState<string[]>(() => {
-    const data = readDataFromUrl('taxiing');
-    return data ? JSON.parse(data) : [];
-  });
-
-  const [holdingPoint, setHoldingPoint] = useState<string[]>(() => {
-    const data = readDataFromUrl('holdingPoint');
-    return data ? JSON.parse(data) : [];
-  });
-
-  const [visualCircuit, setVisualCircuit] = useState<string[]>(() => {
-    const data = readDataFromUrl('visualCircuit');
-    return data ? JSON.parse(data) : [];
-  });
-
-  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>(() => {
-    const data = readDataFromUrl('trainingBox');
-    return data ? JSON.parse(data) : {};
-  });
-
-  const [crossCountry, setCrossCountry] = useState<string[]>(() => {
-    const data = readDataFromUrl('crossCountry');
-    return data ? JSON.parse(data) : [];
-  });
-
-  const [apron, setApron] = useState<string[]>(() => {
-    const data = readDataFromUrl('apron');
-    return data
-      ? JSON.parse(data)
-      : ["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK"];
-  });
-
+  const [taxiing, setTaxiing] = useState<string[]>(() => JSON.parse(localStorage.getItem('taxiing') || '[]'));
+  const [holdingPoint, setHoldingPoint] = useState<string[]>(() => JSON.parse(localStorage.getItem('holdingPoint') || '[]'));
+  const [visualCircuit, setVisualCircuit] = useState<string[]>(() => JSON.parse(localStorage.getItem('visualCircuit') || '[]'));
+  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>(() => JSON.parse(localStorage.getItem('trainingBox') || '{}'));
+  const [crossCountry, setCrossCountry] = useState<string[]>(() => JSON.parse(localStorage.getItem('crossCountry') || '[]'));
+  const [apron, setApron] = useState(() => JSON.parse(localStorage.getItem('apron') || '["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]'));
   const [newReg, setNewReg] = useState<string>("");
-  const [localIR, setLocalIR] = useState<string[]>(() => {
-    const data = readDataFromUrl('localIR');
-    return data ? JSON.parse(data) : [];
-  });
-
-  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => {
-    const data = readDataFromUrl('localIRDetails');
-    return data ? JSON.parse(data) : {};
-  });
-
+  const [localIR, setLocalIR] = useState<string[]>(() => JSON.parse(localStorage.getItem('localIR') || '[]'));
+  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => JSON.parse(localStorage.getItem('localIRDetails') || '{}'));
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
+  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>(() => JSON.parse(localStorage.getItem('crossCountryFrequency') || '{}'));
+  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>(() => JSON.parse(localStorage.getItem('timestamps') || '{}'));
+  const [uiScale, setUiScale] = useState<number>(() => parseFloat(localStorage.getItem('uiScale') || '1'));
 
-  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
-  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
-  const [uiScale, setUiScale] = useState<number>(1);
 
-  // Move between states
-  const moveToLocalIRFromTrainingBox = (reg: string) => {
-    setTrainingBox((prev) => {
-      const updatedTrainingBox = { ...prev };
-      delete updatedTrainingBox[reg];
-      return updatedTrainingBox;
+const moveToLocalIRFromTrainingBox = (reg: string) => {
+  setTrainingBox((prev) => {
+    const updatedTrainingBox = { ...prev };
+    delete updatedTrainingBox[reg]; // Remove from Training Box
+    return updatedTrainingBox;
+  });
+  
+
+  setLocalIR((prev) => [...prev, reg]); // Add to Local IR
+  setLocalIRDetails((prev) => ({
+    ...prev,
+    [reg]: { procedure: "---", height: "", clearance: "" } // Initialize details
+  }));
+};
+
+const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <div style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", borderRadius: "12px", padding: "15px", marginBottom: "25px", flex: 1, fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: "white" }}>
+    <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px" }}>{title}</h2>
+    {children}
+  </div>
+);
+
+  const openTrainingBoxModal = (reg: string) => {
+    setSelectedAircraft(reg);
+    setIsModalOpen(true);
+  };
+
+  const handleLocalIRToTrainingBox = (reg: string, box: string) => {
+    setLocalIRDetails((prev) => {
+      const newDetails = { ...prev };
+      delete newDetails[reg];
+      return newDetails;
     });
-
-    setLocalIR((prev) => [...prev, reg]);
-    setLocalIRDetails((prev) => ({
-      ...prev,
-      [reg]: { procedure: "---", height: "", clearance: "" }
-    }));
+    setLocalIR((prev) => prev.filter((r) => r !== reg));
+    setTrainingBox((prev) => ({ ...prev, [reg]: box }));
+    closeModal();
   };
 
-  const resetStates = () => {
-    setTaxiing([]);
-    setHoldingPoint([]);
-    setVisualCircuit([]);
-    setTrainingBox({});
-    setCrossCountry([]);
-    setApron(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK"]);
-    setNewReg("");
-    setLocalIR([]);
-    setLocalIRDetails({});
-    saveDataToUrl('taxiing', JSON.stringify([]));
-    saveDataToUrl('holdingPoint', JSON.stringify([]));
-    saveDataToUrl('visualCircuit', JSON.stringify([]));
-    saveDataToUrl('trainingBox', JSON.stringify({}));
-    saveDataToUrl('crossCountry', JSON.stringify([]));
-    saveDataToUrl('apron', JSON.stringify(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK"]));
-    saveDataToUrl('localIR', JSON.stringify([]));
-    saveDataToUrl('localIRDetails', JSON.stringify({}));
-  };
+const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ display: "flex", gap: "20px", marginBottom: "25px" }}>
+    {children}
+  </div>
+);
+
+
+const resetStates = () => {
+  setTaxiing([]);
+  setHoldingPoint([]);
+  setVisualCircuit([]);
+  setTrainingBox({});
+  setCrossCountry([]);
+  setApron(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
+  setNewReg("");
+  setLocalIR([]);
+  setLocalIRDetails({});
+  setCrossCountryFrequency({});
+  setTimestamps({});
+  setUiScale(1);
+  localStorage.clear(); // Törli az összes tárolt adatot
+};
 
   const handleScalingChange = (scale: number) => {
     setUiScale(scale);
   };
 
-  // Sync data with URL
-  useEffect(() => {
-    saveDataToUrl('taxiing', JSON.stringify(taxiing));
-    saveDataToUrl('holdingPoint', JSON.stringify(holdingPoint));
-    saveDataToUrl('visualCircuit', JSON.stringify(visualCircuit));
-    saveDataToUrl('trainingBox', JSON.stringify(trainingBox));
-    saveDataToUrl('crossCountry', JSON.stringify(crossCountry));
-    saveDataToUrl('apron', JSON.stringify(apron));
-    saveDataToUrl('localIR', JSON.stringify(localIR));
-    saveDataToUrl('localIRDetails', JSON.stringify(localIRDetails));
-  }, [taxiing, holdingPoint, visualCircuit, trainingBox, crossCountry, apron, localIR, localIRDetails]);
+  // Update the styles of all containers with the selected scale
+useEffect(() => {
+    localStorage.setItem('taxiing', JSON.stringify(taxiing));
+    localStorage.setItem('holdingPoint', JSON.stringify(holdingPoint));
+    localStorage.setItem('visualCircuit', JSON.stringify(visualCircuit));
+    localStorage.setItem('trainingBox', JSON.stringify(trainingBox));
+    localStorage.setItem('crossCountry', JSON.stringify(crossCountry));
+    localStorage.setItem('apron', JSON.stringify(apron));
+    localStorage.setItem('localIR', JSON.stringify(localIR));
+    localStorage.setItem('localIRDetails', JSON.stringify(localIRDetails));
+    localStorage.setItem('crossCountryFrequency', JSON.stringify(crossCountryFrequency));
+    localStorage.setItem('timestamps', JSON.stringify(timestamps));
+    localStorage.setItem('uiScale', JSON.stringify(uiScale));
+  }, [taxiing, holdingPoint, visualCircuit, trainingBox, crossCountry, apron, localIR, localIRDetails, crossCountryFrequency, timestamps, uiScale]);
 
-  const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
 
-  const moveToHoldingPoint = (reg: string) => {
-    setTaxiing(taxiing.filter((r) => r !== reg));
-    setHoldingPoint([...holdingPoint, reg]);
-    setTimestamps((prev) => {
-      const updatedTimestamps = { ...prev };
-      delete updatedTimestamps[reg];
-      return updatedTimestamps;
-    });
-  };
 
-  const moveBackToTaxiing = (reg: string) => {
-    setHoldingPoint(holdingPoint.filter((r) => r !== reg));
-    setTaxiing([...taxiing, reg]);
-    setTimestamps((prev) => {
-      const updatedTimestamps = { ...prev };
-      delete updatedTimestamps[reg];
-      return updatedTimestamps;
-    });
-  };
+const getCurrentTime = () => {
+  const now = new Date();
+  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+};
+
+
+const moveToHoldingPoint = (reg: string) => {
+  setTaxiing(taxiing.filter((r) => r !== reg));
+  setHoldingPoint([...holdingPoint, reg]);
+  setTimestamps((prev) => {
+    const updatedTimestamps = { ...prev };
+    delete updatedTimestamps[reg]; // Reset timestamp when moving to Holding Point
+    return updatedTimestamps;
+  });
+};
+
+const moveBackToTaxiing = (reg: string) => {
+  setHoldingPoint(holdingPoint.filter((r) => r !== reg));
+  setTaxiing([...taxiing, reg]);
+  setTimestamps((prev) => {
+    const updatedTimestamps = { ...prev };
+    delete updatedTimestamps[reg]; // Reset timestamp when moving back to Taxiing
+    return updatedTimestamps;
+  });
+};
 
   const moveToVisualFromHolding = (reg: string) => {
-    setHoldingPoint((prev) => prev.filter((r) => r !== reg));
-    setVisualCircuit((prev) => [...prev, reg]);
-    setTimestamps((prev) => ({
-      ...prev,
-      [reg]: {
-        ...prev[reg],
-        takeoff: getCurrentTime()
-      }
-    }));
-  };
+  setHoldingPoint((prev) => prev.filter((r) => r !== reg));
+  setVisualCircuit((prev) => [...prev, reg]);
+  setTimestamps((prev) => ({
+    ...prev,
+    [reg]: {
+      ...prev[reg],
+      takeoff: getCurrentTime()
+    }
+  }));
+};
 
-  const moveToTaxiingFromVisual = (reg: string) => {
-    setVisualCircuit((prev) => prev.filter((r) => r !== reg));
-    setTaxiing((prev) => [...prev, reg]);
-    setTimestamps((prev) => ({
-      ...prev,
-      [reg]: {
-        ...prev[reg],
-        landed: getCurrentTime()
-      }
-    }));
-  };
+const moveToTaxiingFromVisual = (reg: string) => {
+  setVisualCircuit((prev) => prev.filter((r) => r !== reg));
+  setTaxiing((prev) => [...prev, reg]);
+  setTimestamps((prev) => ({
+    ...prev,
+    [reg]: {
+      ...prev[reg],
+      landed: getCurrentTime()
+    }
+  }));
 };
 
   const moveToVisualCircuitFromLocalIR = (reg: string) => {
@@ -191,21 +161,20 @@ const AfisProgram = () => {
 
   const addAircraftToApron = () => {
     if (newReg) {
-      const updated = [...apron, newReg];
-      setApron(updated);
-      saveDataToUrl('apron', JSON.stringify(updated));
+      setApron([...apron, newReg]);
       setNewReg("");
     }
   };
 
-	  const moveToTaxiFromApron = (reg: string) => {
-    const updatedApron = apron.filter((r) => r !== reg);
-    const updatedTaxiing = [...taxiing, reg];
-    setApron(updatedApron);
-    setTaxiing(updatedTaxiing);
-    saveDataToUrl('apron', JSON.stringify(updatedApron));
-    saveDataToUrl('taxiing', JSON.stringify(updatedTaxiing));
-  };
+const moveToTaxiFromApron = (reg: string) => {
+  setApron(apron.filter((r) => r !== reg));
+  setTaxiing([...taxiing, reg]);
+  setTimestamps((prev) => {
+    const updatedTimestamps = { ...prev };
+    delete updatedTimestamps[reg]; // Reset timestamp when moving from Apron to Taxiing
+    return updatedTimestamps;
+  });
+};
 
 const moveBackToApron = (reg: string) => {
   setTaxiing(taxiing.filter((r) => r !== reg));
