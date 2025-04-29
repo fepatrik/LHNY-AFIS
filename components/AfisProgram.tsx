@@ -3,29 +3,102 @@
 import React, { useState, useEffect } from "react";
 
 const AfisProgram = () => {
-  const [taxiing, setTaxiing] = useState<string[]>([]);
-  const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
-  const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
-  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>({});
-  const [crossCountry, setCrossCountry] = useState<string[]>([]);
-  const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
+  const [taxiing, setTaxiing] = useState<string[]>(() => JSON.parse(localStorage.getItem('taxiing') || '[]'));
+  const [holdingPoint, setHoldingPoint] = useState<string[]>(() => JSON.parse(localStorage.getItem('holdingPoint') || '[]'));
+  const [visualCircuit, setVisualCircuit] = useState<string[]>(() => JSON.parse(localStorage.getItem('visualCircuit') || '[]'));
+  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>(() => JSON.parse(localStorage.getItem('trainingBox') || '{}'));
+  const [crossCountry, setCrossCountry] = useState<string[]>(() => JSON.parse(localStorage.getItem('crossCountry') || '[]'));
+  const [apron, setApron] = useState(() => JSON.parse(localStorage.getItem('apron') || '["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]'));
   const [newReg, setNewReg] = useState<string>("");
-  const [localIR, setLocalIR] = useState<string[]>([]);
-  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>({});
+  const [localIR, setLocalIR] = useState<string[]>(() => JSON.parse(localStorage.getItem('localIR') || '[]'));
+  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => JSON.parse(localStorage.getItem('localIRDetails') || '{}'));
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
-  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
-  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
-const [uiScale, setUiScale] = useState<number>(1); // New state for UI scaling
+  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>(() => JSON.parse(localStorage.getItem('crossCountryFrequency') || '{}'));
+  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>(() => JSON.parse(localStorage.getItem('timestamps') || '{}'));
+  const [uiScale, setUiScale] = useState<number>(() => parseFloat(localStorage.getItem('uiScale') || '1'));
+
+
+const moveToLocalIRFromTrainingBox = (reg: string) => {
+  setTrainingBox((prev) => {
+    const updatedTrainingBox = { ...prev };
+    delete updatedTrainingBox[reg]; // Remove from Training Box
+    return updatedTrainingBox;
+  });
+  
+
+  setLocalIR((prev) => [...prev, reg]); // Add to Local IR
+  setLocalIRDetails((prev) => ({
+    ...prev,
+    [reg]: { procedure: "---", height: "", clearance: "" } // Initialize details
+  }));
+};
+
+const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <div style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", borderRadius: "12px", padding: "15px", marginBottom: "25px", flex: 1, fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: "white" }}>
+    <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px" }}>{title}</h2>
+    {children}
+  </div>
+);
+
+  const openTrainingBoxModal = (reg: string) => {
+    setSelectedAircraft(reg);
+    setIsModalOpen(true);
+  };
+
+  const handleLocalIRToTrainingBox = (reg: string, box: string) => {
+    setLocalIRDetails((prev) => {
+      const newDetails = { ...prev };
+      delete newDetails[reg];
+      return newDetails;
+    });
+    setLocalIR((prev) => prev.filter((r) => r !== reg));
+    setTrainingBox((prev) => ({ ...prev, [reg]: box }));
+    closeModal();
+  };
+
+const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ display: "flex", gap: "20px", marginBottom: "25px" }}>
+    {children}
+  </div>
+);
+
+
+const resetStates = () => {
+  setTaxiing([]);
+  setHoldingPoint([]);
+  setVisualCircuit([]);
+  setTrainingBox({});
+  setCrossCountry([]);
+  setApron(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
+  setNewReg("");
+  setLocalIR([]);
+  setLocalIRDetails({});
+  setCrossCountryFrequency({});
+  setTimestamps({});
+  setUiScale(1);
+  localStorage.clear(); // Törli az összes tárolt adatot
+};
 
   const handleScalingChange = (scale: number) => {
     setUiScale(scale);
   };
 
   // Update the styles of all containers with the selected scale
-  useEffect(() => {
-    document.documentElement.style.setProperty('--ui-scale', `${uiScale}`);
-  }, [uiScale]);
+useEffect(() => {
+    localStorage.setItem('taxiing', JSON.stringify(taxiing));
+    localStorage.setItem('holdingPoint', JSON.stringify(holdingPoint));
+    localStorage.setItem('visualCircuit', JSON.stringify(visualCircuit));
+    localStorage.setItem('trainingBox', JSON.stringify(trainingBox));
+    localStorage.setItem('crossCountry', JSON.stringify(crossCountry));
+    localStorage.setItem('apron', JSON.stringify(apron));
+    localStorage.setItem('localIR', JSON.stringify(localIR));
+    localStorage.setItem('localIRDetails', JSON.stringify(localIRDetails));
+    localStorage.setItem('crossCountryFrequency', JSON.stringify(crossCountryFrequency));
+    localStorage.setItem('timestamps', JSON.stringify(timestamps));
+    localStorage.setItem('uiScale', JSON.stringify(uiScale));
+  }, [taxiing, holdingPoint, visualCircuit, trainingBox, crossCountry, apron, localIR, localIRDetails, crossCountryFrequency, timestamps, uiScale]);
+
 
 
 const getCurrentTime = () => {
@@ -174,6 +247,7 @@ const moveToCrossCountry = (reg: string) => {
 
   const handleTrainingBoxSelection = (box: string) => {
     moveToTrainingBox(selectedAircraft, box);
+	  handleLocalIRToTrainingBox(selectedAircraft, box);
     closeModal();
   };
 
@@ -410,23 +484,38 @@ const renderAircraft = (
         }`}
       </style>
 
-<Section title="Page Size">
-  <div style={{ marginBottom: "var(--ui-margin)", width: "600px" /* Állítsuk be a csúszka szélességét */ }}>
-    <label style={{ fontSize: "var(--ui-font-size)", display: "flex", alignItems: "center" }}>
-      
+<Section title="LHNY AFIS - Ludwig Schwarz Software Company">
+  <div style={{ marginBottom: "20px", width: "800px" }}>
+    <label style={{ fontSize: "16px", display: "flex", alignItems: "center" }}>
+      Page size:
       <input
         type="range"
-        min="0.5"
-        max="2"
-        step="0.1"
+        min="0.2"
+        max="1.5"
+        step="0.001"
         value={uiScale}
         onChange={(e) => handleScalingChange(parseFloat(e.target.value))}
         style={{
           marginLeft: "15px",
-          flex: "1", // Engedélyezzük, hogy a csúszka kitöltse az elérhető helyet
+          flex: "1",
         }}
       />
     </label>
+    <button
+      onClick={resetStates}
+      style={{
+        marginTop: "10px",
+        padding: "10px 16px",
+        fontSize: "16px",
+        backgroundColor: "rgb(220, 53, 69)",
+        color: "white",
+        borderRadius: "8px",
+        cursor: "pointer",
+        border: "none",
+      }}
+    >
+      Reset everything
+    </button>
   </div>
 </Section>
 
@@ -447,19 +536,24 @@ const renderAircraft = (
 
 
 
-      <Section title={`Local IR (${localIR.length})`}>
-        {renderAircraft(localIR, [{ label: "Joining Visual Circuit", onClick: moveToVisualCircuitFromLocalIR }])}
-      </Section>
+ <Container>
+ <Section title={`Local IR (${localIR.length})`}>
+    {renderAircraft(localIR, [
+      { label: "Joining Visual Circuit", onClick: moveToVisualCircuitFromLocalIR },
+      { label: "Proceed to Training Box", onClick: openTrainingBoxModal },
+    ])}
+  </Section>
 
-      <Section title="Training Box">
-        {renderAircraft(
-          Object.keys(trainingBox),
-          [
-            { label: "Joining Visual Circuit", onClick: moveToVisualFromTrainingBox },
-            { label: "Proceed to Cross Country", onClick: moveToCrossCountry }
-          ]
-        )}
-      </Section>
+<Section title="Training Box">
+  {renderAircraft(
+    Object.keys(trainingBox),
+    [
+      { label: "Joining Visual Circuit", onClick: moveToVisualFromTrainingBox },
+      { label: "Proceed to Local IR", onClick: moveToLocalIRFromTrainingBox } // Update this line
+    ]
+  )}
+</Section>
+    </Container>
 
       <Section title={`Visual Circuit (${visualCircuit.length})`}>
         {renderAircraft(visualCircuit, [
@@ -470,6 +564,7 @@ const renderAircraft = (
         ])}
       </Section>
 
+    <Container>
       <Section title={`Holding Point (${holdingPoint.length})`}>
         {renderAircraft(holdingPoint, [
           { label: "--> Visual Circuit", onClick: moveToVisualFromHolding },
@@ -483,6 +578,7 @@ const renderAircraft = (
           { label: "<-- Apron", onClick: moveBackToApron },
         ])}
       </Section>
+    </Container>
 
       <Section title="Apron">
         {renderAircraft(apron, [{ label: "->>Taxi", onClick: moveToTaxiFromApron }])}
