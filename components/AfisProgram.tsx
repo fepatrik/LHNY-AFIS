@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const AfisProgram = () => {
   const [taxiing, setTaxiing] = useState<string[]>([]);
@@ -16,6 +16,16 @@ const AfisProgram = () => {
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
   const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
   const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
+const [uiScale, setUiScale] = useState<number>(1); // New state for UI scaling
+
+  const handleScalingChange = (scale: number) => {
+    setUiScale(scale);
+  };
+
+  // Update the styles of all containers with the selected scale
+  useEffect(() => {
+    document.documentElement.style.setProperty('--ui-scale', `${uiScale}`);
+  }, [uiScale]);
 
 
 const getCurrentTime = () => {
@@ -192,9 +202,18 @@ const renderAircraft = (
   extraContent?: (reg: string, index?: number) => React.ReactNode,
   isCrossCountry: boolean = false
 ) => (
-  <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", justifyContent: "flex-start", marginBottom: "20px" }}>
+  <div
+    style={{
+      display: "flex",
+      gap: `${uiScale * 15}px`,        // Scaled gap
+      flexWrap: "wrap",
+      justifyContent: "flex-start",
+      marginBottom: `${uiScale * 20}px`,  // Scaled margin-bottom
+      fontSize: `${uiScale * 18}px` // Scale font-size
+    }}
+  >
     {regs.map((reg, index) => {
-      const onFreq = crossCountryFrequency[reg] ?? true; // default true
+      const onFreq = crossCountryFrequency[reg] ?? true;
       const isInLocalIR = localIR.includes(reg);
       const isInTrainingBox = trainingBox[reg];
       const isInVisualCircuit = visualCircuit.includes(reg);
@@ -203,37 +222,39 @@ const renderAircraft = (
           ? 'limegreen'
           : 'red'
         : isInLocalIR || isInTrainingBox || isInVisualCircuit
-        ? 'limegreen' // green border for local IR, training box, or visual circuit
-        : 'white'; // default to white border
-      
+        ? 'limegreen'
+        : 'white';
+
       return (
         <div
           key={reg}
           style={{
-            width: "180px",
-            minHeight: "200px",
+            width: `${uiScale * 180}px`,  // Scaled width
+            minHeight: `${uiScale * 200}px`,  // Scaled height
             border: `3px solid ${borderColor}`,
-            borderRadius: "15px",
-            padding: "12px",
-            margin: "5px",
+            borderRadius: `${uiScale * 15}px`,  // Scaled border-radius
+            padding: `${uiScale * 12}px`,  // Scaled padding
+            margin: `${uiScale * 5}px`,  // Scaled margin
             textAlign: "center",
             boxSizing: "border-box",
             backgroundColor: "rgba(0, 0, 0, 0.5)",
             color: "white",
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-            fontSize: "18px",
+            fontSize: `${uiScale * 18}px`,  // Keep font scale consistent
             animation: pulsing ? "pulse 2s infinite" : undefined,
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            opacity: isCrossCountry && !onFreq ? 0.5 : 1 // halvány ha nincs frekin
+            opacity: isCrossCountry && !onFreq ? 0.5 : 1
           }}
         >
-          <div style={{ fontWeight: "bold", fontSize: "24px", marginBottom: "10px" }}>{index + 1}. {reg}</div>
+          <div style={{ fontWeight: "bold", fontSize: `${uiScale * 24}px`, marginBottom: `${uiScale * 10}px` }}>
+            {index + 1}. {reg}
+          </div>
 
           {isCrossCountry && (
-            <div style={{ marginBottom: "10px" }}>
-              <label style={{ fontSize: "14px" }}>
+            <div style={{ marginBottom: `${uiScale * 10}px` }}>
+              <label style={{ fontSize: `${uiScale * 14}px` }}>
                 On Frequency
                 <input
                   type="checkbox"
@@ -244,23 +265,24 @@ const renderAircraft = (
                       [reg]: !prev[reg]
                     }))
                   }
-                  style={{ marginLeft: "8px", transform: "scale(1.5)" }}
+                  style={{ marginLeft: `${uiScale * 8}px`, transform: `scale(${uiScale * 1.5})` }}
                 />
               </label>
             </div>
           )}
 
           {trainingBox[reg] && (
-            <div style={{ fontSize: "20px", color: "#ccc", marginBottom: "10px" }}>
+           <div style={{ fontSize: `${uiScale * 20}px`, color: "rgb(204, 204, 204)", marginBottom: `${uiScale * 10}px` }}>
+
               {trainingBox[reg] === "Proceeding to VC" ? "PROCEEDING TO VC" : `TB ${trainingBox[reg]}`}
               <input
                 type="text"
                 placeholder="Task, height"
                 style={{
-                  padding: '6px',
-                  borderRadius: '6px',
+                  padding: `${uiScale * 6}px`,
+                  borderRadius: `${uiScale * 6}px`,
                   color: 'black',
-                  marginTop: '8px',
+                  marginTop: `${uiScale * 8}px`,
                   width: '100%',
                 }}
               />
@@ -272,8 +294,8 @@ const renderAircraft = (
               <select
                 value={localIRDetails[reg]?.procedure || "---"}
                 onChange={(e) => handleLocalIRChange(reg, 'procedure', e.target.value)}
-                style={{ marginBottom: '8px', padding: '6px', borderRadius: '6px' }}
-              >
+                style={{ marginBottom: `${uiScale * 8}px`, padding: `${uiScale * 6}px`, borderRadius: `${uiScale * 6}px` }}
+              > ```typescript
                 {["---", "NDB Traffic Pattern", "Holding over NYR", "Holding over PQ", "RNP Z", "RNP Y", "RNP Y Circle to Land", "RNP Z Circle to Land", "VOR APP", "NDB APP"].map(option => (
                   <option key={option} value={option}>{option}</option>
                 ))}
@@ -283,14 +305,23 @@ const renderAircraft = (
                 value={localIRDetails[reg]?.height || ""}
                 onChange={(e) => handleLocalIRChange(reg, 'height', e.target.value)}
                 placeholder="Height"
-                style={{ padding: '6px', borderRadius: '6px', color: 'black', marginBottom: '8px' }}
+                style={{
+                  padding: `${uiScale * 6}px`,
+                  borderRadius: `${uiScale * 6}px`,
+                  color: 'black',
+                  marginBottom: `${uiScale * 8}px`
+                }}
               />
               <input
                 type="text"
                 value={localIRDetails[reg]?.clearance || ""}
                 onChange={(e) => handleLocalIRChange(reg, 'clearance', e.target.value)}
                 placeholder="Clearance"
-                style={{ padding: '6px', borderRadius: '6px', color: 'black' }}
+                style={{
+                  padding: `${uiScale * 6}px`,
+                  borderRadius: `${uiScale * 6}px`,
+                  color: 'black'
+                }}
               />
             </>
           )}
@@ -299,46 +330,47 @@ const renderAircraft = (
 
           {/* Take-off és Landed idő kijelzése */}
           {timestamps[reg]?.takeoff && (
-  <div style={{
-    fontSize: "14px",
-    color: "white",
-    backgroundColor: "black",
-    borderRadius: "6px",
-    padding: "6px",
-    fontWeight: "bold",
-    marginTop: "8px",
-    boxShadow: "0px 0px 10px rgba(0, 255, 0, 0.6)",
-  }}>
-    Take-off: {timestamps[reg].takeoff}
-  </div>
-)}
-{timestamps[reg]?.landed && (
-  <div style={{
-    fontSize: "14px",
-    color: "white",
-    backgroundColor: "black",
-    borderRadius: "6px",
-    padding: "6px",
-    fontWeight: "bold",
-    marginTop: "8px",
-    boxShadow: "0px 0px 10px rgba(0, 0, 255, 0.6)",
-  }}>
-    Landed: {timestamps[reg].landed}
-  </div>
-)}
+            <div style={{
+              fontSize: `${uiScale * 14}px`,
+              color: "white",
+              backgroundColor: "black",
+              borderRadius: `${uiScale * 6}px`,
+              padding: `${uiScale * 6}px`,
+              fontWeight: "bold",
+              marginTop: `${uiScale * 8}px`,
+              boxShadow: "0px 0px 10px rgba(0, 255, 0, 0.6)",
+            }}>
+              Take-off: {timestamps[reg].takeoff}
+            </div>
+          )}
+          {timestamps[reg]?.landed && (
+            <div style={{
+              fontSize: `${uiScale * 14}px`,
+              color: "white",
+              backgroundColor: "black",
+              borderRadius: `${uiScale * 6}px`,
+              padding: `${uiScale * 6}px`,
+              fontWeight: "bold",
+              marginTop: `${uiScale * 8}px`,
+              boxShadow: "0px 0px 10px rgba(0, 0, 255, 0.6)",
+            }}>
+              Landed: {timestamps[reg].landed}
+            </div>
+          )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "10px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: `${uiScale * 6}px`, marginTop: `${uiScale * 10}px` }}>
             {actions.map(({ label, onClick }) => (
               <button
                 key={label}
                 style={{
                   width: "100%",
-                  padding: "10px",
-                  backgroundColor: label.includes("<--") || label.includes("Vacated") || label.includes("Apron") ? "#dc3545" : "#28a745",
+                  padding: `${uiScale * 10}px`,
+                  backgroundColor: label.includes("<--") || label.includes("Vacated") || label.includes("Apron") ? "rgb(220, 53, 69)" : "rgb(40, 167, 69)"
+,
                   color: "white",
-                  fontSize: "16px",
+                  fontSize: `${uiScale * 16}px`,
                   fontWeight: "bold",
-                  borderRadius: "10px",
+                  borderRadius: `${uiScale * 10}px`,
                   border: "none",
                   cursor: "pointer",
                   fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
@@ -351,9 +383,9 @@ const renderAircraft = (
           </div>
 
           {visualCircuit.includes(reg) && (
-            <div style={{ marginTop: "10px", display: "flex", justifyContent: "space-between" }}>
-              <button onClick={() => moveLeft(reg)} style={{ padding: "5px", fontSize: "20px", borderRadius: "6px" }}>←</button>
-              <button onClick={() => moveRight(reg)} style={{ padding: "5px", fontSize: "20px", borderRadius: "6px" }}>→</button>
+            <div style={{ marginTop: `${uiScale * 10}px`, display: "flex", justifyContent: "space-between" }}>
+              <button onClick={() => moveLeft(reg)} style={{ padding: `${uiScale * 5}px`, fontSize: `${uiScale * 20}px`, borderRadius: `${uiScale * 6}px` }}>←</button>
+              <button onClick={() => moveRight(reg)} style={{ padding: `${uiScale * 5}px`, fontSize: `${uiScale * 20}px`, borderRadius: `${uiScale * 6}px` }}>→</button>
             </div>
           )}
         </div>
@@ -367,13 +399,36 @@ const renderAircraft = (
 
   return (
     <>
-      <style>
+       <style>
         {`@keyframes pulse {
           0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
           50% { box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.8); }
           100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+        }
+        html {
+          font-size: calc(16px * var(--ui-scale));  // A way to scale font 
         }`}
       </style>
+
+<Section title="Page Size">
+  <div style={{ marginBottom: "var(--ui-margin)", width: "600px" /* Állítsuk be a csúszka szélességét */ }}>
+    <label style={{ fontSize: "var(--ui-font-size)", display: "flex", alignItems: "center" }}>
+      
+      <input
+        type="range"
+        min="0.5"
+        max="2"
+        step="0.1"
+        value={uiScale}
+        onChange={(e) => handleScalingChange(parseFloat(e.target.value))}
+        style={{
+          marginLeft: "15px",
+          flex: "1", // Engedélyezzük, hogy a csúszka kitöltse az elérhető helyet
+        }}
+      />
+    </label>
+  </div>
+</Section>
 
 <Section title="Cross Country">
   {renderAircraft(
@@ -389,6 +444,8 @@ const renderAircraft = (
     true // << EZ AZ ÚJ FLAG: isCrossCountry
   )}
 </Section>
+
+
 
       <Section title={`Local IR (${localIR.length})`}>
         {renderAircraft(localIR, [{ label: "Joining Visual Circuit", onClick: moveToVisualCircuitFromLocalIR }])}
@@ -429,22 +486,25 @@ const renderAircraft = (
 
       <Section title="Apron">
         {renderAircraft(apron, [{ label: "->>Taxi", onClick: moveToTaxiFromApron }])}
-        <div className="flex gap-2" style={{ marginTop: "10px" }}>
+        <div style={{ marginTop: "var(--ui-margin)" }}>
           <input
             type="text"
             value={newReg}
             onChange={(e) => setNewReg(e.target.value)}
             placeholder="Új lajstrom"
-            style={{ padding: "8px", borderRadius: "8px", fontSize: "16px", color: "black" }}
+            style={{ padding: "var(--ui-padding)", borderRadius: "8px", fontSize: "var(--ui-font-size)", color: "black" }}
           />
-          <button
-            onClick={addAircraftToApron}
-            style={{ padding: "8px 16px", fontSize: "16px", backgroundColor: "#28a745", color: "white", borderRadius: "8px", cursor: "pointer", border: "none" }}
-          >
-            Hozzáadás
-          </button>
+<button
+  onClick={addAircraftToApron}
+  style={{ padding: "var(--ui-padding) 16px", fontSize: "var(--ui-font-size)", backgroundColor: "rgb(40, 167, 69)", color: "white", borderRadius: "8px", cursor: "pointer", border: "none" }}
+>
+  Hozzáadás
+</button>
         </div>
       </Section>
+	  
+	  
+	   
 	  
 	  
 	  
@@ -483,12 +543,12 @@ const renderAircraft = (
               </button>
             ))}
             <div>
-              <button
-                onClick={closeModal}
-                style={{ marginTop: "14px", padding: "10px 20px", fontSize: "16px", backgroundColor: "#dc3545", color: "white", borderRadius: "8px", border: "none", cursor: "pointer" }}
-              >
-                Cancel
-              </button>
+<button
+  onClick={closeModal}
+  style={{ marginTop: "14px", padding: "10px 20px", fontSize: "16px", backgroundColor: "rgb(220, 53, 69)", color: "white", borderRadius: "8px", border: "none", cursor: "pointer" }}
+>
+  Cancel
+</button>
             </div>
           </div>
         </div>
