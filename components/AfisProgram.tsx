@@ -5,16 +5,15 @@ import { useRouter } from "next/router";
 
 const AfisProgram = () => {
   const [isClient, setIsClient] = useState(false);
-  const [router, setRouter] = useState(null);
+  const router = useRouter();
 
-  // Ensure the component only runs on the client side
+  // Ensure the component runs only on the client side
   useEffect(() => {
     setIsClient(true);
-    setRouter(require('next/router').useRouter()); // Dynamically import useRouter to avoid SSR issues
   }, []);
 
-  if (!isClient || !router) {
-    return null; // Prevent rendering during SSR
+  if (!isClient) {
+    return null; // Prevent rendering on the server
   }
 
   // Helper function to save data to the URL
