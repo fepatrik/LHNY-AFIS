@@ -1,22 +1,66 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
+import Cookies from 'js-cookie';
 
 const AfisProgram = () => {
-  const [taxiing, setTaxiing] = useState<string[]>(() => JSON.parse(localStorage.getItem('taxiing') || '[]'));
-  const [holdingPoint, setHoldingPoint] = useState<string[]>(() => JSON.parse(localStorage.getItem('holdingPoint') || '[]'));
-  const [visualCircuit, setVisualCircuit] = useState<string[]>(() => JSON.parse(localStorage.getItem('visualCircuit') || '[]'));
-  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>(() => JSON.parse(localStorage.getItem('trainingBox') || '{}'));
-  const [crossCountry, setCrossCountry] = useState<string[]>(() => JSON.parse(localStorage.getItem('crossCountry') || '[]'));
-  const [apron, setApron] = useState(() => JSON.parse(localStorage.getItem('apron') || '["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]'));
+  const [taxiing, setTaxiing] = useState<string[]>(() => {
+    const cookieData = Cookies.get('taxiing');
+    return cookieData ? JSON.parse(cookieData) : [];
+  });
+
+  const [holdingPoint, setHoldingPoint] = useState<string[]>(() => {
+    const cookieData = Cookies.get('holdingPoint');
+    return cookieData ? JSON.parse(cookieData) : [];
+  });
+
+  const [visualCircuit, setVisualCircuit] = useState<string[]>(() => {
+    const cookieData = Cookies.get('visualCircuit');
+    return cookieData ? JSON.parse(cookieData) : [];
+  });
+
+  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>(() => {
+    const cookieData = Cookies.get('trainingBox');
+    return cookieData ? JSON.parse(cookieData) : {};
+  });
+
+  const [crossCountry, setCrossCountry] = useState<string[]>(() => {
+    const cookieData = Cookies.get('crossCountry');
+    return cookieData ? JSON.parse(cookieData) : [];
+  });
+
+  const [apron, setApron] = useState(() => {
+    const cookieData = Cookies.get('apron');
+    return cookieData ? JSON.parse(cookieData) : ["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"];
+  });
+
   const [newReg, setNewReg] = useState<string>("");
-  const [localIR, setLocalIR] = useState<string[]>(() => JSON.parse(localStorage.getItem('localIR') || '[]'));
-  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => JSON.parse(localStorage.getItem('localIRDetails') || '{}'));
+  const [localIR, setLocalIR] = useState<string[]>(() => {
+    const cookieData = Cookies.get('localIR');
+    return cookieData ? JSON.parse(cookieData) : [];
+  });
+
+  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => {
+    const cookieData = Cookies.get('localIRDetails');
+    return cookieData ? JSON.parse(cookieData) : {};
+  });
+
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
-  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>(() => JSON.parse(localStorage.getItem('crossCountryFrequency') || '{}'));
-  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>(() => JSON.parse(localStorage.getItem('timestamps') || '{}'));
-  const [uiScale, setUiScale] = useState<number>(() => parseFloat(localStorage.getItem('uiScale') || '1'));
+  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>(() => {
+    const cookieData = Cookies.get('crossCountryFrequency');
+    return cookieData ? JSON.parse(cookieData) : {};
+  });
+
+  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>(() => {
+    const cookieData = Cookies.get('timestamps');
+    return cookieData ? JSON.parse(cookieData) : {};
+  });
+
+  const [uiScale, setUiScale] = useState<number>(() => {
+    const cookieData = Cookies.get('uiScale');
+    return cookieData ? parseFloat(cookieData) : 1;
+  });
 
 
 const moveToLocalIRFromTrainingBox = (reg: string) => {
@@ -65,20 +109,33 @@ const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 
 const resetStates = () => {
-  setTaxiing([]);
-  setHoldingPoint([]);
-  setVisualCircuit([]);
-  setTrainingBox({});
-  setCrossCountry([]);
-  setApron(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
-  setNewReg("");
-  setLocalIR([]);
-  setLocalIRDetails({});
-  setCrossCountryFrequency({});
-  setTimestamps({});
-  setUiScale(1);
-  localStorage.clear(); // Törli az összes tárolt adatot
-};
+    setTaxiing([]);
+    setHoldingPoint([]);
+    setVisualCircuit([]);
+    setTrainingBox({});
+    setCrossCountry([]);
+    setApron(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
+    setNewReg("");
+    setLocalIR([]);
+    setLocalIRDetails({});
+    setCrossCountryFrequency({});
+    setTimestamps({});
+    setUiScale(1);
+
+    // Sütik törlése
+    Cookies.remove('taxiing');
+    Cookies.remove('holdingPoint');
+    Cookies.remove('visualCircuit');
+    Cookies.remove('trainingBox');
+    Cookies.remove('crossCountry');
+    Cookies.remove('apron');
+    Cookies.remove('localIR');
+    Cookies.remove('localIRDetails');
+    Cookies.remove('crossCountryFrequency');
+    Cookies.remove('timestamps');
+    Cookies.remove('uiScale');
+  };
+
 
   const handleScalingChange = (scale: number) => {
     setUiScale(scale);
@@ -86,17 +143,17 @@ const resetStates = () => {
 
   // Update the styles of all containers with the selected scale
 useEffect(() => {
-    localStorage.setItem('taxiing', JSON.stringify(taxiing));
-    localStorage.setItem('holdingPoint', JSON.stringify(holdingPoint));
-    localStorage.setItem('visualCircuit', JSON.stringify(visualCircuit));
-    localStorage.setItem('trainingBox', JSON.stringify(trainingBox));
-    localStorage.setItem('crossCountry', JSON.stringify(crossCountry));
-    localStorage.setItem('apron', JSON.stringify(apron));
-    localStorage.setItem('localIR', JSON.stringify(localIR));
-    localStorage.setItem('localIRDetails', JSON.stringify(localIRDetails));
-    localStorage.setItem('crossCountryFrequency', JSON.stringify(crossCountryFrequency));
-    localStorage.setItem('timestamps', JSON.stringify(timestamps));
-    localStorage.setItem('uiScale', JSON.stringify(uiScale));
+    Cookies.set('taxiing', JSON.stringify(taxiing), { expires: 7 });
+    Cookies.set('holdingPoint', JSON.stringify(holdingPoint), { expires: 7 });
+    Cookies.set('visualCircuit', JSON.stringify(visualCircuit), { expires: 7 });
+    Cookies.set('trainingBox', JSON.stringify(trainingBox), { expires: 7 });
+    Cookies.set('crossCountry', JSON.stringify(crossCountry), { expires: 7 });
+    Cookies.set('apron', JSON.stringify(apron), { expires: 7 });
+    Cookies.set('localIR', JSON.stringify(localIR), { expires: 7 });
+    Cookies.set('localIRDetails', JSON.stringify(localIRDetails), { expires: 7 });
+    Cookies.set('crossCountryFrequency', JSON.stringify(crossCountryFrequency), { expires: 7 });
+    Cookies.set('timestamps', JSON.stringify(timestamps), { expires: 7 });
+    Cookies.set('uiScale', JSON.stringify(uiScale), { expires: 7 });
   }, [taxiing, holdingPoint, visualCircuit, trainingBox, crossCountry, apron, localIR, localIRDetails, crossCountryFrequency, timestamps, uiScale]);
 
 
