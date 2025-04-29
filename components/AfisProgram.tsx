@@ -3,20 +3,26 @@
 import React, { useState, useEffect } from "react";
 
 const AfisProgram = () => {
-  const [taxiing, setTaxiing] = useState<string[]>(() => JSON.parse(localStorage.getItem('taxiing') || '[]'));
-  const [holdingPoint, setHoldingPoint] = useState<string[]>(() => JSON.parse(localStorage.getItem('holdingPoint') || '[]'));
-  const [visualCircuit, setVisualCircuit] = useState<string[]>(() => JSON.parse(localStorage.getItem('visualCircuit') || '[]'));
-  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>(() => JSON.parse(localStorage.getItem('trainingBox') || '{}'));
-  const [crossCountry, setCrossCountry] = useState<string[]>(() => JSON.parse(localStorage.getItem('crossCountry') || '[]'));
-  const [apron, setApron] = useState(() => JSON.parse(localStorage.getItem('apron') || '["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]'));
+  const [taxiing, setTaxiing] = useState<string[]>([]);
+  const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
+  const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
+  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>({});
+  const [crossCountry, setCrossCountry] = useState<string[]>([]);
+  const [apron, setApron] = useState<string[]>([
+    "TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC",
+    "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"
+  ]);
   const [newReg, setNewReg] = useState<string>("");
-  const [localIR, setLocalIR] = useState<string[]>(() => JSON.parse(localStorage.getItem('localIR') || '[]'));
-  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => JSON.parse(localStorage.getItem('localIRDetails') || '{}'));
+  const [localIR, setLocalIR] = useState<string[]>([]);
+  const [localIRDetails, setLocalIRDetails] = useState<{
+    [key: string]: { procedure: string; height: string; clearance: string }
+  }>({});
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
-  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>(() => JSON.parse(localStorage.getItem('crossCountryFrequency') || '{}'));
-  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>(() => JSON.parse(localStorage.getItem('timestamps') || '{}'));
-  const [uiScale, setUiScale] = useState<number>(() => parseFloat(localStorage.getItem('uiScale') || '1'));
+  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
+  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
+  const [uiScale, setUiScale] = useState<number>(1);
+
 
 
 const moveToLocalIRFromTrainingBox = (reg: string) => {
@@ -64,23 +70,25 @@ const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 
-const resetStates = () => {
-  setTaxiing([]);
-  setHoldingPoint([]);
-  setVisualCircuit([]);
-  setTrainingBox({});
-  setCrossCountry([]);
-  setApron(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
-  setNewReg("");
-  setLocalIR([]);
-  setLocalIRDetails({});
-  setCrossCountryFrequency({});
-  setTimestamps({});
-  setUiScale(1);
-  localStorage.clear(); // Törli az összes tárolt adatot
-};
+  const resetStates = () => {
+    setTaxiing([]);
+    setHoldingPoint([]);
+    setVisualCircuit([]);
+    setTrainingBox({});
+    setCrossCountry([]);
+    setApron([
+      "TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC",
+      "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"
+    ]);
+    setNewReg("");
+    setLocalIR([]);
+    setLocalIRDetails({});
+    setCrossCountryFrequency({});
+    setTimestamps({});
+    setUiScale(1);
+  };
 
-  const handleScalingChange = (scale: number) => {
+   const handleScalingChange = (scale: number) => {
     setUiScale(scale);
   };
 
@@ -101,10 +109,10 @@ useEffect(() => {
 
 
 
-const getCurrentTime = () => {
-  const now = new Date();
-  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-};
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
 
 
 const moveToHoldingPoint = (reg: string) => {
