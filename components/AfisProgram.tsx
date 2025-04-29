@@ -1,6 +1,5 @@
 'use client';
 
-
 import React, { useState, useEffect } from "react";
 import { useRouter } from 'next/router';
 
@@ -20,7 +19,7 @@ const AfisProgram = () => {
     return queryParams.get(key);
   };
 
-	  const [taxiing, setTaxiing] = useState<string[]>(() => {
+  const [taxiing, setTaxiing] = useState<string[]>(() => {
     const data = readDataFromUrl('taxiing');
     return data ? JSON.parse(data) : [];
   });
@@ -65,36 +64,27 @@ const AfisProgram = () => {
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
 
 
-  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>(() => {
-    const cookieData = Cookies.get('crossCountryFrequency');
-    return cookieData ? JSON.parse(cookieData) : {};
-  });
-
-  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>(() => {
-    const cookieData = Cookies.get('timestamps');
-    return cookieData ? JSON.parse(cookieData) : {};
-  });
-
-  const [uiScale, setUiScale] = useState<number>(() => {
-    const cookieData = Cookies.get('uiScale');
-    return cookieData ? parseFloat(cookieData) : 1;
-  });
+  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
+  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
+  const [uiScale, setUiScale] = useState<number>(1);
 
 
-const moveToLocalIRFromTrainingBox = (reg: string) => {
-  setTrainingBox((prev) => {
-    const updatedTrainingBox = { ...prev };
-    delete updatedTrainingBox[reg]; // Remove from Training Box
-    return updatedTrainingBox;
-  });
+
+  const moveToLocalIRFromTrainingBox = (reg: string) => {
+    setTrainingBox((prev) => {
+      const updatedTrainingBox = { ...prev };
+      delete updatedTrainingBox[reg]; // Remove from Training Box
+      return updatedTrainingBox;
+    });
   
 
-  setLocalIR((prev) => [...prev, reg]); // Add to Local IR
-  setLocalIRDetails((prev) => ({
-    ...prev,
-    [reg]: { procedure: "---", height: "", clearance: "" } // Initialize details
-  }));
-};
+    setLocalIR((prev) => [...prev, reg]); // Add to Local IR
+    setLocalIRDetails((prev) => ({
+      ...prev,
+      [reg]: { procedure: "---", height: "", clearance: "" } // Initialize details
+    }));
+  };
+
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", borderRadius: "12px", padding: "15px", marginBottom: "25px", flex: 1, fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: "white" }}>
@@ -152,7 +142,7 @@ const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   };
 
   // Update the styles of all containers with the selected scale
-useEffect(() => {
+  useEffect(() => {
     saveDataToUrl('taxiing', JSON.stringify(taxiing));
     saveDataToUrl('holdingPoint', JSON.stringify(holdingPoint));
     saveDataToUrl('visualCircuit', JSON.stringify(visualCircuit));
