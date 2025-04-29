@@ -1,52 +1,69 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import Cookies from 'js-cookie';
+import { useRouter } from 'next/router';
 
 const AfisProgram = () => {
-  const [taxiing, setTaxiing] = useState<string[]>(() => {
-    const cookieData = Cookies.get('taxiing');
-    return cookieData ? JSON.parse(cookieData) : [];
+  const router = useRouter();
+
+  // Helper function to save data to the URL
+  const saveDataToUrl = (key: string, value: string) => {
+    const queryParams = new URLSearchParams(window.location.search);
+    queryParams.set(key, value);
+    router.replace(`?${queryParams.toString()}`, undefined, { shallow: true });
+  };
+
+  // Helper function to read data from the URL
+  const readDataFromUrl = (key: string): string | null => {
+    const queryParams = new URLSearchParams(window.location.search);
+    return queryParams.get(key);
+  };
+
+	  const [taxiing, setTaxiing] = useState<string[]>(() => {
+    const data = readDataFromUrl('taxiing');
+    return data ? JSON.parse(data) : [];
   });
 
   const [holdingPoint, setHoldingPoint] = useState<string[]>(() => {
-    const cookieData = Cookies.get('holdingPoint');
-    return cookieData ? JSON.parse(cookieData) : [];
+    const data = readDataFromUrl('holdingPoint');
+    return data ? JSON.parse(data) : [];
   });
 
   const [visualCircuit, setVisualCircuit] = useState<string[]>(() => {
-    const cookieData = Cookies.get('visualCircuit');
-    return cookieData ? JSON.parse(cookieData) : [];
+    const data = readDataFromUrl('visualCircuit');
+    return data ? JSON.parse(data) : [];
   });
 
   const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>(() => {
-    const cookieData = Cookies.get('trainingBox');
-    return cookieData ? JSON.parse(cookieData) : {};
+    const data = readDataFromUrl('trainingBox');
+    return data ? JSON.parse(data) : {};
   });
 
   const [crossCountry, setCrossCountry] = useState<string[]>(() => {
-    const cookieData = Cookies.get('crossCountry');
-    return cookieData ? JSON.parse(cookieData) : [];
+    const data = readDataFromUrl('crossCountry');
+    return data ? JSON.parse(data) : [];
   });
 
-  const [apron, setApron] = useState(() => {
-    const cookieData = Cookies.get('apron');
-    return cookieData ? JSON.parse(cookieData) : ["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"];
+  const [apron, setApron] = useState<string[]>(() => {
+    const data = readDataFromUrl('apron');
+    return data ? JSON.parse(data) : ["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"];
   });
 
   const [newReg, setNewReg] = useState<string>("");
   const [localIR, setLocalIR] = useState<string[]>(() => {
-    const cookieData = Cookies.get('localIR');
-    return cookieData ? JSON.parse(cookieData) : [];
+    const data = readDataFromUrl('localIR');
+    return data ? JSON.parse(data) : [];
   });
 
   const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => {
-    const cookieData = Cookies.get('localIRDetails');
-    return cookieData ? JSON.parse(cookieData) : {};
+    const data = readDataFromUrl('localIRDetails');
+    return data ? JSON.parse(data) : {};
   });
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
+
+
   const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>(() => {
     const cookieData = Cookies.get('crossCountryFrequency');
     return cookieData ? JSON.parse(cookieData) : {};
@@ -108,7 +125,7 @@ const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 
-const resetStates = () => {
+  const resetStates = () => {
     setTaxiing([]);
     setHoldingPoint([]);
     setVisualCircuit([]);
@@ -118,22 +135,14 @@ const resetStates = () => {
     setNewReg("");
     setLocalIR([]);
     setLocalIRDetails({});
-    setCrossCountryFrequency({});
-    setTimestamps({});
-    setUiScale(1);
-
-    // Sütik törlése
-    Cookies.remove('taxiing');
-    Cookies.remove('holdingPoint');
-    Cookies.remove('visualCircuit');
-    Cookies.remove('trainingBox');
-    Cookies.remove('crossCountry');
-    Cookies.remove('apron');
-    Cookies.remove('localIR');
-    Cookies.remove('localIRDetails');
-    Cookies.remove('crossCountryFrequency');
-    Cookies.remove('timestamps');
-    Cookies.remove('uiScale');
+    saveDataToUrl('taxiing', JSON.stringify([]));
+    saveDataToUrl('holdingPoint', JSON.stringify([]));
+    saveDataToUrl('visualCircuit', JSON.stringify([]));
+    saveDataToUrl('trainingBox', JSON.stringify({}));
+    saveDataToUrl('crossCountry', JSON.stringify([]));
+    saveDataToUrl('apron', JSON.stringify(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]));
+    saveDataToUrl('localIR', JSON.stringify([]));
+    saveDataToUrl('localIRDetails', JSON.stringify({}));
   };
 
 
@@ -143,18 +152,16 @@ const resetStates = () => {
 
   // Update the styles of all containers with the selected scale
 useEffect(() => {
-    Cookies.set('taxiing', JSON.stringify(taxiing), { expires: 7 });
-    Cookies.set('holdingPoint', JSON.stringify(holdingPoint), { expires: 7 });
-    Cookies.set('visualCircuit', JSON.stringify(visualCircuit), { expires: 7 });
-    Cookies.set('trainingBox', JSON.stringify(trainingBox), { expires: 7 });
-    Cookies.set('crossCountry', JSON.stringify(crossCountry), { expires: 7 });
-    Cookies.set('apron', JSON.stringify(apron), { expires: 7 });
-    Cookies.set('localIR', JSON.stringify(localIR), { expires: 7 });
-    Cookies.set('localIRDetails', JSON.stringify(localIRDetails), { expires: 7 });
-    Cookies.set('crossCountryFrequency', JSON.stringify(crossCountryFrequency), { expires: 7 });
-    Cookies.set('timestamps', JSON.stringify(timestamps), { expires: 7 });
-    Cookies.set('uiScale', JSON.stringify(uiScale), { expires: 7 });
-  }, [taxiing, holdingPoint, visualCircuit, trainingBox, crossCountry, apron, localIR, localIRDetails, crossCountryFrequency, timestamps, uiScale]);
+    saveDataToUrl('taxiing', JSON.stringify(taxiing));
+    saveDataToUrl('holdingPoint', JSON.stringify(holdingPoint));
+    saveDataToUrl('visualCircuit', JSON.stringify(visualCircuit));
+    saveDataToUrl('trainingBox', JSON.stringify(trainingBox));
+    saveDataToUrl('crossCountry', JSON.stringify(crossCountry));
+    saveDataToUrl('apron', JSON.stringify(apron));
+    saveDataToUrl('localIR', JSON.stringify(localIR));
+    saveDataToUrl('localIRDetails', JSON.stringify(localIRDetails));
+  }, [taxiing, holdingPoint, visualCircuit, trainingBox, crossCountry, apron, localIR, localIRDetails]);
+
 
 
 
@@ -218,20 +225,21 @@ const moveToTaxiingFromVisual = (reg: string) => {
 
   const addAircraftToApron = () => {
     if (newReg) {
-      setApron([...apron, newReg]);
+      const updated = [...apron, newReg];
+      setApron(updated);
+      saveDataToUrl('apron', JSON.stringify(updated));
       setNewReg("");
     }
   };
 
-const moveToTaxiFromApron = (reg: string) => {
-  setApron(apron.filter((r) => r !== reg));
-  setTaxiing([...taxiing, reg]);
-  setTimestamps((prev) => {
-    const updatedTimestamps = { ...prev };
-    delete updatedTimestamps[reg]; // Reset timestamp when moving from Apron to Taxiing
-    return updatedTimestamps;
-  });
-};
+	  const moveToTaxiFromApron = (reg: string) => {
+    const updatedApron = apron.filter((r) => r !== reg);
+    const updatedTaxiing = [...taxiing, reg];
+    setApron(updatedApron);
+    setTaxiing(updatedTaxiing);
+    saveDataToUrl('apron', JSON.stringify(updatedApron));
+    saveDataToUrl('taxiing', JSON.stringify(updatedTaxiing));
+  };
 
 const moveBackToApron = (reg: string) => {
   setTaxiing(taxiing.filter((r) => r !== reg));
