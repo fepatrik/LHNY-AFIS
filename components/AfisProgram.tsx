@@ -28,8 +28,8 @@ const styles = {
   } as React.CSSProperties,
   aircraftCard: {
     flexBasis: `${22 * scale}%`,
-    maxWidth: `${220 * scale}px`,
-    minHeight: `${200 * scale}px`,
+    maxWidth: `${180 * scale}px`,
+    minHeight: `${20 * scale}px`,
     border: `${3 * scale}px solid white`,
     borderRadius: `${15 * scale}px`,
     padding: `${12 * scale}px`,
@@ -50,6 +50,16 @@ const styles = {
 const getCurrentTime = () => {
   const now = new Date();
   return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+};
+
+const moveToHoldingPointFromApron = (reg: string) => {
+  setApron((prev) => prev.filter((r) => r !== reg)); // Eltávolítja a gépet az Apron állapotból
+  setHoldingPoint((prev) => [...prev, reg]);        // Hozzáadja a gépet a Holding Point állapothoz
+  setTimestamps((prev) => {
+    const updatedTimestamps = { ...prev };
+    delete updatedTimestamps[reg]; // Reset timestamp when moving from Apron to Holding Point
+    return updatedTimestamps;
+  });
 };
 
 const moveToLocalIRFromTrainingBox = (reg: string) => {
@@ -371,13 +381,15 @@ const renderAircraft = (
                 style={{
                   width: "100%",
                   padding: `${10 * scale}px`,
-                  backgroundColor:
-                    label === "Proceed to TB" || label === "Proceed to Local IR" || label === "Proceed to Cross Country"
-                      ? "#28a745" // Green for "Proceed to TB", "Proceed to Local IR", and "Proceed to Cross Country"
-                      : label.includes("<--") || label.includes("Vacated") || label.includes("Apron")
-                      ? "#dc3545" // Red for specific actions
-                      : "#28a745", // Green for default actions
-                  color: "white",
+      backgroundColor:
+        label === "Return to Stand" // Ellenőrizzük, hogy a cím "Return to stand"-e
+          ? "#dc3545" // Piros szín
+          : label === "Proceed to TB" || label === "Proceed to Local IR" || label === "Proceed to Cross Country"
+          ? "#28a745" // Zöld szín a Proceed gombokhoz
+          : label.includes("<--") || label.includes("Vacated") || label.includes("Apron")
+          ? "#dc3545" // További piros gombok
+          : "#28a745", // Alapértelmezett zöld szín
+      color: "white",
                   fontSize: `${16 * scale}px`,
                   fontWeight: "bold",
                   borderRadius: `${10 * scale}px`,
@@ -486,7 +498,7 @@ const renderAircraft = (
     <Section title="Holding Point">
       {renderAircraft(holdingPoint, [
         { label: "Visual Circuit", onClick: moveToVisualFromHolding },
-        { label: "Return to stand", onClick: moveBackToTaxiing },
+        { label: "Return to Stand", onClick: moveBackToTaxiing },
       ], true)}
     </Section>
   </div>
@@ -504,19 +516,36 @@ const renderAircraft = (
 <Section title="Apron">
   {renderAircraft(
     [...apron].sort((a, b) => a.localeCompare(b)), // Sort the array alphabetically
-    [{ label: "Taxi", onClick: moveToTaxiFromApron }]
+    [
+      { label: "Taxi", onClick: moveToTaxiFromApron },
+      { label: "Holding Point", onClick: moveToHoldingPointFromApron }, // Új gomb hozzáadása
+    ]
   )}
   <div className="flex gap-2" style={{ marginTop: "10px" }}>
     <input
       type="text"
       value={newReg}
-      onChange={(e) => setNewReg(e.target.value)}
+      onChange={(e) => setNewReg(e.target.value.toUpperCase())} // Kisbetűk nagybetűvé alakítása
       placeholder="Új lajstrom"
-      style={{ padding: "8px", borderRadius: "8px", fontSize: "16px", color: "black" }}
+      style={{
+        padding: "8px",
+        borderRadius: "8px",
+        fontSize: "16px",
+        color: "black",
+        textTransform: "uppercase", // Megjelenítés: mindig nagybetűs
+      }}
     />
     <button
       onClick={addAircraftToApron}
-      style={{ padding: "8px 16px", fontSize: "16px", backgroundColor: "#28a745", color: "white", borderRadius: "8px", cursor: "pointer", border: "none" }}
+      style={{
+        padding: "8px 16px",
+        fontSize: "16px",
+        backgroundColor: "#28a745",
+        color: "white",
+        borderRadius: "8px",
+        cursor: "pointer",
+        border: "none",
+      }}
     >
       Hozzáadás
     </button>
