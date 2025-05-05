@@ -18,14 +18,14 @@ const AfisProgram = () => {
   const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
 const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
 
-  const styles = {
-    container: {
-      display: "flex",
-      gap: `${15 * scale}px`,
-      flexWrap: "wrap",
-      justifyContent: "flex-start",
-      marginBottom: `${20 * scale}px`,
-    },
+const styles: { [key: string]: React.CSSProperties } = {
+  container: {
+    display: "flex",
+    gap: `${15 * scale}px`,
+    flexWrap: "wrap", // Corrected value
+    justifyContent: "flex-start",
+    marginBottom: `${20 * scale}px`,
+  },
     aircraftCard: {
       flexBasis: `${22 * scale}%`,
       maxWidth: `${220 * scale}px`,
