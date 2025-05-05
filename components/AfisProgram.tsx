@@ -22,6 +22,7 @@ const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
     container: {
       display: "flex",
       gap: `${15 * scale}px`,
+      flexWrap: "wrap",
       justifyContent: "flex-start",
       marginBottom: `${20 * scale}px`,
     },
