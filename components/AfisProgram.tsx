@@ -8,20 +8,121 @@ const AfisProgram = () => {
   const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
   const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>({});
   const [crossCountry, setCrossCountry] = useState<string[]>([]);
+<<<<<<< HEAD
   const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
   const [newReg, setNewReg] = useState<string>("");
   const [localIR, setLocalIR] = useState<string[]>([]);
   const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>({});
+=======
+  const [apron, setApron] = useState<string[]>([
+    "TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC",
+    "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"
+  ]);
+  const [newReg, setNewReg] = useState<string>("");
+  const [localIR, setLocalIR] = useState<string[]>([]);
+  const [localIRDetails, setLocalIRDetails] = useState<{
+    [key: string]: { procedure: string; height: string; clearance: string }
+  }>({});
+>>>>>>> 95aa5a1f4edf4cbc4ebc0746b9721f8aadd814ab
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
   const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
   const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
+<<<<<<< HEAD
+=======
+  const [uiScale, setUiScale] = useState<number>(1);
 
 
-const getCurrentTime = () => {
-  const now = new Date();
-  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+const moveToLocalIRFromTrainingBox = (reg: string) => {
+  setTrainingBox((prev) => {
+    const updatedTrainingBox = { ...prev };
+    delete updatedTrainingBox[reg]; // Remove from Training Box
+    return updatedTrainingBox;
+  });
+  
+
+  setLocalIR((prev) => [...prev, reg]); // Add to Local IR
+  setLocalIRDetails((prev) => ({
+    ...prev,
+    [reg]: { procedure: "---", height: "", clearance: "" } // Initialize details
+  }));
 };
+
+const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <div style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", borderRadius: "12px", padding: "15px", marginBottom: "25px", flex: 1, fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: "white" }}>
+    <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px" }}>{title}</h2>
+    {children}
+  </div>
+);
+
+  const openTrainingBoxModal = (reg: string) => {
+    setSelectedAircraft(reg);
+    setIsModalOpen(true);
+  };
+
+  const handleLocalIRToTrainingBox = (reg: string, box: string) => {
+    setLocalIRDetails((prev) => {
+      const newDetails = { ...prev };
+      delete newDetails[reg];
+      return newDetails;
+    });
+    setLocalIR((prev) => prev.filter((r) => r !== reg));
+    setTrainingBox((prev) => ({ ...prev, [reg]: box }));
+    closeModal();
+  };
+
+const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ display: "flex", gap: "20px", marginBottom: "25px" }}>
+    {children}
+  </div>
+);
+
+
+  const resetStates = () => {
+    setTaxiing([]);
+    setHoldingPoint([]);
+    setVisualCircuit([]);
+    setTrainingBox({});
+    setCrossCountry([]);
+    setApron([
+      "TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC",
+      "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"
+    ]);
+    setNewReg("");
+    setLocalIR([]);
+    setLocalIRDetails({});
+    setCrossCountryFrequency({});
+    setTimestamps({});
+    setUiScale(1);
+  };
+
+   const handleScalingChange = (scale: number) => {
+    setUiScale(scale);
+  };
+
+  // Update the styles of all containers with the selected scale
+useEffect(() => {
+    localStorage.setItem('taxiing', JSON.stringify(taxiing));
+    localStorage.setItem('holdingPoint', JSON.stringify(holdingPoint));
+    localStorage.setItem('visualCircuit', JSON.stringify(visualCircuit));
+    localStorage.setItem('trainingBox', JSON.stringify(trainingBox));
+    localStorage.setItem('crossCountry', JSON.stringify(crossCountry));
+    localStorage.setItem('apron', JSON.stringify(apron));
+    localStorage.setItem('localIR', JSON.stringify(localIR));
+    localStorage.setItem('localIRDetails', JSON.stringify(localIRDetails));
+    localStorage.setItem('crossCountryFrequency', JSON.stringify(crossCountryFrequency));
+    localStorage.setItem('timestamps', JSON.stringify(timestamps));
+    localStorage.setItem('uiScale', JSON.stringify(uiScale));
+  }, [taxiing, holdingPoint, visualCircuit, trainingBox, crossCountry, apron, localIR, localIRDetails, crossCountryFrequency, timestamps, uiScale]);
+
+>>>>>>> 95aa5a1f4edf4cbc4ebc0746b9721f8aadd814ab
+
+
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
 
 const moveToLocalIRFromTrainingBox = (reg: string) => {
   setTrainingBox((prev) => {
@@ -306,8 +407,17 @@ const renderAircraft = (
                 type="text"
                 value={localIRDetails[reg]?.clearance || ""}
                 onChange={(e) => handleLocalIRChange(reg, 'clearance', e.target.value)}
+<<<<<<< HEAD
                 placeholder="Remark"
                 style={{ padding: '6px', borderRadius: '6px', color: 'black' }}
+=======
+                placeholder="Feladat"
+                style={{
+                  padding: `${uiScale * 6}px`,
+                  borderRadius: `${uiScale * 6}px`,
+                  color: 'black'
+                }}
+>>>>>>> 95aa5a1f4edf4cbc4ebc0746b9721f8aadd814ab
               />
             </>
           )}
@@ -412,6 +522,7 @@ style={{
   )}
 </Section>
 
+<<<<<<< HEAD
 <div style={{ display: "flex", width: "100%", marginBottom: "25px" }}>
   <div style={{ flex: 1, marginRight: "10px" }}>
 <Section title="Local IR">
@@ -419,6 +530,26 @@ style={{
     { label: "Joining Visual Circuit", onClick: moveToVisualCircuitFromLocalIR },
     { label: "Runway Vacated", onClick: moveToTaxiingFromLocalIR }, // Add the new button here
   ])}
+=======
+
+
+ <Container>
+ <Section title={`Local IR (${localIR.length})`}>
+    {renderAircraft(localIR, [
+      { label: "Joining VC", onClick: moveToVisualCircuitFromLocalIR },
+      { label: "To Training Box", onClick: openTrainingBoxModal },
+    ])}
+  </Section>
+
+<Section title="Training Box">
+  {renderAircraft(
+    Object.keys(trainingBox),
+    [
+      { label: "Joining VC", onClick: moveToVisualFromTrainingBox },
+      { label: "To Local IR", onClick: moveToLocalIRFromTrainingBox } // Update this line
+    ]
+  )}
+>>>>>>> 95aa5a1f4edf4cbc4ebc0746b9721f8aadd814ab
 </Section>
   </div>
 
@@ -438,9 +569,9 @@ style={{
       <Section title={`Visual Circuit (${visualCircuit.length})`}>
         {renderAircraft(visualCircuit, [
           { label: "Runway Vacated", onClick: moveToTaxiingFromVisual },
-          { label: "Proceed to TB", onClick: openModal },
-          { label: "Proceed to Local IR", onClick: moveToLocalIR },
-          { label: "Proceed to Cross Country", onClick: moveToCrossCountry }
+          { label: "To TB", onClick: openModal },
+          { label: "To Local IR", onClick: moveToLocalIR },
+          { label: "To Cross Country", onClick: moveToCrossCountry }
         ])}
       </Section>
 
