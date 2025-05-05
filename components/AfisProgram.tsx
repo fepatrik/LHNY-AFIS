@@ -410,7 +410,7 @@ const renderAircraft = (
         }`}
       </style>
 
-      <style>{styles.mediaQueries}</style>
+
 
 <Section title="AFIS Program - by Ludwig Schwarz Software Company">
   <input
