@@ -1,104 +1,21 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 const AfisProgram = () => {
-  const [taxiing, setTaxiing] = useState<string[]>(() => JSON.parse(localStorage.getItem('taxiing') || '[]'));
-  const [holdingPoint, setHoldingPoint] = useState<string[]>(() => JSON.parse(localStorage.getItem('holdingPoint') || '[]'));
-  const [visualCircuit, setVisualCircuit] = useState<string[]>(() => JSON.parse(localStorage.getItem('visualCircuit') || '[]'));
-  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>(() => JSON.parse(localStorage.getItem('trainingBox') || '{}'));
-  const [crossCountry, setCrossCountry] = useState<string[]>(() => JSON.parse(localStorage.getItem('crossCountry') || '[]'));
-  const [apron, setApron] = useState(() => JSON.parse(localStorage.getItem('apron') || '["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]'));
+  const [taxiing, setTaxiing] = useState<string[]>([]);
+  const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
+  const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
+  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>({});
+  const [crossCountry, setCrossCountry] = useState<string[]>([]);
+  const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
   const [newReg, setNewReg] = useState<string>("");
-  const [localIR, setLocalIR] = useState<string[]>(() => JSON.parse(localStorage.getItem('localIR') || '[]'));
-  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => JSON.parse(localStorage.getItem('localIRDetails') || '{}'));
+  const [localIR, setLocalIR] = useState<string[]>([]);
+  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>({});
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
-  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>(() => JSON.parse(localStorage.getItem('crossCountryFrequency') || '{}'));
-  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>(() => JSON.parse(localStorage.getItem('timestamps') || '{}'));
-  const [uiScale, setUiScale] = useState<number>(() => parseFloat(localStorage.getItem('uiScale') || '1'));
-
-
-const moveToLocalIRFromTrainingBox = (reg: string) => {
-  setTrainingBox((prev) => {
-    const updatedTrainingBox = { ...prev };
-    delete updatedTrainingBox[reg]; // Remove from Training Box
-    return updatedTrainingBox;
-  });
-  
-
-  setLocalIR((prev) => [...prev, reg]); // Add to Local IR
-  setLocalIRDetails((prev) => ({
-    ...prev,
-    [reg]: { procedure: "---", height: "", clearance: "" } // Initialize details
-  }));
-};
-
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", borderRadius: "12px", padding: "15px", marginBottom: "25px", flex: 1, fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: "white" }}>
-    <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px" }}>{title}</h2>
-    {children}
-  </div>
-);
-
-  const openTrainingBoxModal = (reg: string) => {
-    setSelectedAircraft(reg);
-    setIsModalOpen(true);
-  };
-
-  const handleLocalIRToTrainingBox = (reg: string, box: string) => {
-    setLocalIRDetails((prev) => {
-      const newDetails = { ...prev };
-      delete newDetails[reg];
-      return newDetails;
-    });
-    setLocalIR((prev) => prev.filter((r) => r !== reg));
-    setTrainingBox((prev) => ({ ...prev, [reg]: box }));
-    closeModal();
-  };
-
-const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ display: "flex", gap: "20px", marginBottom: "25px" }}>
-    {children}
-  </div>
-);
-
-
-const resetStates = () => {
-  setTaxiing([]);
-  setHoldingPoint([]);
-  setVisualCircuit([]);
-  setTrainingBox({});
-  setCrossCountry([]);
-  setApron(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
-  setNewReg("");
-  setLocalIR([]);
-  setLocalIRDetails({});
-  setCrossCountryFrequency({});
-  setTimestamps({});
-  setUiScale(1);
-  localStorage.clear(); // Törli az összes tárolt adatot
-};
-
-  const handleScalingChange = (scale: number) => {
-    setUiScale(scale);
-  };
-
-  // Update the styles of all containers with the selected scale
-useEffect(() => {
-    localStorage.setItem('taxiing', JSON.stringify(taxiing));
-    localStorage.setItem('holdingPoint', JSON.stringify(holdingPoint));
-    localStorage.setItem('visualCircuit', JSON.stringify(visualCircuit));
-    localStorage.setItem('trainingBox', JSON.stringify(trainingBox));
-    localStorage.setItem('crossCountry', JSON.stringify(crossCountry));
-    localStorage.setItem('apron', JSON.stringify(apron));
-    localStorage.setItem('localIR', JSON.stringify(localIR));
-    localStorage.setItem('localIRDetails', JSON.stringify(localIRDetails));
-    localStorage.setItem('crossCountryFrequency', JSON.stringify(crossCountryFrequency));
-    localStorage.setItem('timestamps', JSON.stringify(timestamps));
-    localStorage.setItem('uiScale', JSON.stringify(uiScale));
-  }, [taxiing, holdingPoint, visualCircuit, trainingBox, crossCountry, apron, localIR, localIRDetails, crossCountryFrequency, timestamps, uiScale]);
-
+  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
+  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
 
 
 const getCurrentTime = () => {
@@ -106,6 +23,18 @@ const getCurrentTime = () => {
   return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
+const moveToLocalIRFromTrainingBox = (reg: string) => {
+  setTrainingBox((prev) => {
+    const copy = { ...prev };
+    delete copy[reg]; // Törli a gépet a Training Box-ból
+    return copy;
+  });
+  setLocalIR((prev) => [...prev, reg]); // Hozzáadja a gépet a Local IR-hez
+  setLocalIRDetails((prev) => ({
+    ...prev,
+    [reg]: { procedure: "---", height: "", clearance: "" }, // Default értékek a Local IR-hez
+  }));
+};
 
 const moveToHoldingPoint = (reg: string) => {
   setTaxiing(taxiing.filter((r) => r !== reg));
@@ -135,6 +64,18 @@ const moveBackToTaxiing = (reg: string) => {
     [reg]: {
       ...prev[reg],
       takeoff: getCurrentTime()
+    }
+  }));
+};
+
+const moveToTaxiingFromLocalIR = (reg: string) => {
+  setLocalIR(localIR.filter((r) => r !== reg));
+  setTaxiing([...taxiing, reg]);
+  setTimestamps((prev) => ({
+    ...prev,
+    [reg]: {
+      ...prev[reg],
+      landed: getCurrentTime(),
     }
   }));
 };
@@ -247,7 +188,6 @@ const moveToCrossCountry = (reg: string) => {
 
   const handleTrainingBoxSelection = (box: string) => {
     moveToTrainingBox(selectedAircraft, box);
-	  handleLocalIRToTrainingBox(selectedAircraft, box);
     closeModal();
   };
 
@@ -276,18 +216,9 @@ const renderAircraft = (
   extraContent?: (reg: string, index?: number) => React.ReactNode,
   isCrossCountry: boolean = false
 ) => (
-  <div
-    style={{
-      display: "flex",
-      gap: `${uiScale * 15}px`,        // Scaled gap
-      flexWrap: "wrap",
-      justifyContent: "flex-start",
-      marginBottom: `${uiScale * 20}px`,  // Scaled margin-bottom
-      fontSize: `${uiScale * 18}px` // Scale font-size
-    }}
-  >
+  <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", justifyContent: "flex-start", marginBottom: "20px" }}>
     {regs.map((reg, index) => {
-      const onFreq = crossCountryFrequency[reg] ?? true;
+      const onFreq = crossCountryFrequency[reg] ?? true; // default true
       const isInLocalIR = localIR.includes(reg);
       const isInTrainingBox = trainingBox[reg];
       const isInVisualCircuit = visualCircuit.includes(reg);
@@ -296,39 +227,37 @@ const renderAircraft = (
           ? 'limegreen'
           : 'red'
         : isInLocalIR || isInTrainingBox || isInVisualCircuit
-        ? 'limegreen'
-        : 'white';
-
+        ? 'limegreen' // green border for local IR, training box, or visual circuit
+        : 'white'; // default to white border
+      
       return (
         <div
           key={reg}
           style={{
-            width: `${uiScale * 180}px`,  // Scaled width
-            minHeight: `${uiScale * 200}px`,  // Scaled height
+            width: "180px",
+            minHeight: "200px",
             border: `3px solid ${borderColor}`,
-            borderRadius: `${uiScale * 15}px`,  // Scaled border-radius
-            padding: `${uiScale * 12}px`,  // Scaled padding
-            margin: `${uiScale * 5}px`,  // Scaled margin
+            borderRadius: "15px",
+            padding: "12px",
+            margin: "5px",
             textAlign: "center",
             boxSizing: "border-box",
             backgroundColor: "rgba(0, 0, 0, 0.5)",
             color: "white",
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-            fontSize: `${uiScale * 18}px`,  // Keep font scale consistent
+            fontSize: "18px",
             animation: pulsing ? "pulse 2s infinite" : undefined,
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            opacity: isCrossCountry && !onFreq ? 0.5 : 1
+            opacity: isCrossCountry && !onFreq ? 0.5 : 1 // halvány ha nincs frekin
           }}
         >
-          <div style={{ fontWeight: "bold", fontSize: `${uiScale * 24}px`, marginBottom: `${uiScale * 10}px` }}>
-            {index + 1}. {reg}
-          </div>
+          <div style={{ fontWeight: "bold", fontSize: "24px", marginBottom: "10px" }}>{index + 1}. {reg}</div>
 
           {isCrossCountry && (
-            <div style={{ marginBottom: `${uiScale * 10}px` }}>
-              <label style={{ fontSize: `${uiScale * 14}px` }}>
+            <div style={{ marginBottom: "10px" }}>
+              <label style={{ fontSize: "14px" }}>
                 On Frequency
                 <input
                   type="checkbox"
@@ -339,38 +268,30 @@ const renderAircraft = (
                       [reg]: !prev[reg]
                     }))
                   }
-                  style={{ marginLeft: `${uiScale * 8}px`, transform: `scale(${uiScale * 1.5})` }}
+                  style={{ marginLeft: "8px", transform: "scale(1.5)" }}
                 />
               </label>
             </div>
           )}
 
-          {trainingBox[reg] && (
-           <div style={{ fontSize: `${uiScale * 20}px`, color: "rgb(204, 204, 204)", marginBottom: `${uiScale * 10}px` }}>
-
-              {trainingBox[reg] === "Proceeding to VC" ? "PROCEEDING TO VC" : `TB ${trainingBox[reg]}`}
-              <input
-                type="text"
-                placeholder="Task, height"
-                style={{
-                  padding: `${uiScale * 6}px`,
-                  borderRadius: `${uiScale * 6}px`,
-                  color: 'black',
-                  marginTop: `${uiScale * 8}px`,
-                  width: '100%',
-                }}
-              />
-            </div>
-          )}
+{trainingBox[reg] && (
+  <div
+    style={{ fontSize: "20px", color: "#ccc", marginBottom: "10px", cursor: "pointer" }}
+    onClick={() => openModal(reg)}
+    title="Click to change training box"
+  >
+    {trainingBox[reg] === "Proceeding to VC" ? "PROCEEDING TO VC" : `TB ${trainingBox[reg]}`}
+  </div>
+)}
 
           {localIR.includes(reg) && (
             <>
               <select
                 value={localIRDetails[reg]?.procedure || "---"}
                 onChange={(e) => handleLocalIRChange(reg, 'procedure', e.target.value)}
-                style={{ marginBottom: `${uiScale * 8}px`, padding: `${uiScale * 6}px`, borderRadius: `${uiScale * 6}px` }}
-              > ```typescript
-                {["---", "NDB Traffic Pattern", "Holding over NYR", "Holding over PQ", "RNP Z", "RNP Y", "RNP Y Circle to Land", "RNP Z Circle to Land", "VOR APP", "NDB APP"].map(option => (
+                style={{ marginBottom: '8px', padding: '6px', borderRadius: '6px' }}
+              >
+                {["---", "NDB Traffic Pattern", "Holding NYR", "Holding PQ", "RNP Z", "RNP Y", "RNP Y Circle to Land", "RNP Z Circle to Land", "VOR APP", "NDB APP"].map(option => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
@@ -379,23 +300,14 @@ const renderAircraft = (
                 value={localIRDetails[reg]?.height || ""}
                 onChange={(e) => handleLocalIRChange(reg, 'height', e.target.value)}
                 placeholder="Height"
-                style={{
-                  padding: `${uiScale * 6}px`,
-                  borderRadius: `${uiScale * 6}px`,
-                  color: 'black',
-                  marginBottom: `${uiScale * 8}px`
-                }}
+                style={{ padding: '6px', borderRadius: '6px', color: 'black', marginBottom: '8px' }}
               />
               <input
                 type="text"
                 value={localIRDetails[reg]?.clearance || ""}
                 onChange={(e) => handleLocalIRChange(reg, 'clearance', e.target.value)}
-                placeholder="Clearance"
-                style={{
-                  padding: `${uiScale * 6}px`,
-                  borderRadius: `${uiScale * 6}px`,
-                  color: 'black'
-                }}
+                placeholder="Remark"
+                style={{ padding: '6px', borderRadius: '6px', color: 'black' }}
               />
             </>
           )}
@@ -404,51 +316,55 @@ const renderAircraft = (
 
           {/* Take-off és Landed idő kijelzése */}
           {timestamps[reg]?.takeoff && (
-            <div style={{
-              fontSize: `${uiScale * 14}px`,
-              color: "white",
-              backgroundColor: "black",
-              borderRadius: `${uiScale * 6}px`,
-              padding: `${uiScale * 6}px`,
-              fontWeight: "bold",
-              marginTop: `${uiScale * 8}px`,
-              boxShadow: "0px 0px 10px rgba(0, 255, 0, 0.6)",
-            }}>
-              Take-off: {timestamps[reg].takeoff}
-            </div>
-          )}
-          {timestamps[reg]?.landed && (
-            <div style={{
-              fontSize: `${uiScale * 14}px`,
-              color: "white",
-              backgroundColor: "black",
-              borderRadius: `${uiScale * 6}px`,
-              padding: `${uiScale * 6}px`,
-              fontWeight: "bold",
-              marginTop: `${uiScale * 8}px`,
-              boxShadow: "0px 0px 10px rgba(0, 0, 255, 0.6)",
-            }}>
-              Landed: {timestamps[reg].landed}
-            </div>
-          )}
+  <div style={{
+    fontSize: "14px",
+    color: "white",
+    backgroundColor: "black",
+    borderRadius: "6px",
+    padding: "6px",
+    fontWeight: "bold",
+    marginTop: "8px",
+    boxShadow: "0px 0px 10px rgba(0, 255, 0, 0.6)",
+  }}>
+    Take-off: {timestamps[reg].takeoff}
+  </div>
+)}
+{timestamps[reg]?.landed && (
+  <div style={{
+    fontSize: "14px",
+    color: "white",
+    backgroundColor: "black",
+    borderRadius: "6px",
+    padding: "6px",
+    fontWeight: "bold",
+    marginTop: "8px",
+    boxShadow: "0px 0px 10px rgba(0, 0, 255, 0.6)",
+  }}>
+    Landed: {timestamps[reg].landed}
+  </div>
+)}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: `${uiScale * 6}px`, marginTop: `${uiScale * 10}px` }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "10px" }}>
             {actions.map(({ label, onClick }) => (
               <button
                 key={label}
-                style={{
-                  width: "100%",
-                  padding: `${uiScale * 10}px`,
-                  backgroundColor: label.includes("<--") || label.includes("Vacated") || label.includes("Apron") ? "rgb(220, 53, 69)" : "rgb(40, 167, 69)"
-,
-                  color: "white",
-                  fontSize: `${uiScale * 16}px`,
-                  fontWeight: "bold",
-                  borderRadius: `${uiScale * 10}px`,
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                }}
+style={{
+  width: "100%",
+  padding: "10px",
+  backgroundColor:
+    label === "Proceed to TB" || label === "Proceed to Local IR" || label === "Proceed to Cross Country"
+      ? "#28a745" // Green for "Proceed to TB", "Proceed to Local IR", and "Proceed to Cross Country"
+      : label.includes("<--") || label.includes("Vacated") || label.includes("Apron")
+      ? "#dc3545" // Red for specific actions
+      : "#28a745", // Green for default actions
+  color: "white",
+  fontSize: "16px",
+  fontWeight: "bold",
+  borderRadius: "10px",
+  border: "none",
+  cursor: "pointer",
+  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+}}
                 onClick={() => onClick(reg)}
               >
                 {label}
@@ -457,9 +373,9 @@ const renderAircraft = (
           </div>
 
           {visualCircuit.includes(reg) && (
-            <div style={{ marginTop: `${uiScale * 10}px`, display: "flex", justifyContent: "space-between" }}>
-              <button onClick={() => moveLeft(reg)} style={{ padding: `${uiScale * 5}px`, fontSize: `${uiScale * 20}px`, borderRadius: `${uiScale * 6}px` }}>←</button>
-              <button onClick={() => moveRight(reg)} style={{ padding: `${uiScale * 5}px`, fontSize: `${uiScale * 20}px`, borderRadius: `${uiScale * 6}px` }}>→</button>
+            <div style={{ marginTop: "10px", display: "flex", justifyContent: "space-between" }}>
+              <button onClick={() => moveLeft(reg)} style={{ padding: "5px", fontSize: "20px", borderRadius: "6px" }}>←</button>
+              <button onClick={() => moveRight(reg)} style={{ padding: "5px", fontSize: "20px", borderRadius: "6px" }}>→</button>
             </div>
           )}
         </div>
@@ -473,51 +389,13 @@ const renderAircraft = (
 
   return (
     <>
-       <style>
+      <style>
         {`@keyframes pulse {
           0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
           50% { box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.8); }
           100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
-        }
-        html {
-          font-size: calc(16px * var(--ui-scale));  // A way to scale font 
         }`}
       </style>
-
-<Section title="LHNY AFIS - Ludwig Schwarz Software Company">
-  <div style={{ marginBottom: "20px", width: "800px" }}>
-    <label style={{ fontSize: "16px", display: "flex", alignItems: "center" }}>
-      Page size:
-      <input
-        type="range"
-        min="0.2"
-        max="1.5"
-        step="0.001"
-        value={uiScale}
-        onChange={(e) => handleScalingChange(parseFloat(e.target.value))}
-        style={{
-          marginLeft: "15px",
-          flex: "1",
-        }}
-      />
-    </label>
-    <button
-      onClick={resetStates}
-      style={{
-        marginTop: "10px",
-        padding: "10px 16px",
-        fontSize: "16px",
-        backgroundColor: "rgb(220, 53, 69)",
-        color: "white",
-        borderRadius: "8px",
-        cursor: "pointer",
-        border: "none",
-      }}
-    >
-      Reset everything
-    </button>
-  </div>
-</Section>
 
 <Section title="Cross Country">
   {renderAircraft(
@@ -534,26 +412,28 @@ const renderAircraft = (
   )}
 </Section>
 
-
-
- <Container>
- <Section title={`Local IR (${localIR.length})`}>
-    {renderAircraft(localIR, [
-      { label: "Joining Visual Circuit", onClick: moveToVisualCircuitFromLocalIR },
-      { label: "Proceed to Training Box", onClick: openTrainingBoxModal },
-    ])}
-  </Section>
-
-<Section title="Training Box">
-  {renderAircraft(
-    Object.keys(trainingBox),
-    [
-      { label: "Joining Visual Circuit", onClick: moveToVisualFromTrainingBox },
-      { label: "Proceed to Local IR", onClick: moveToLocalIRFromTrainingBox } // Update this line
-    ]
-  )}
+<div style={{ display: "flex", width: "100%", marginBottom: "25px" }}>
+  <div style={{ flex: 1, marginRight: "10px" }}>
+<Section title="Local IR">
+  {renderAircraft(localIR, [
+    { label: "Joining Visual Circuit", onClick: moveToVisualCircuitFromLocalIR },
+    { label: "Runway Vacated", onClick: moveToTaxiingFromLocalIR }, // Add the new button here
+  ])}
 </Section>
-    </Container>
+  </div>
+
+  <div style={{ flex: 1, marginLeft: "10px" }}>
+    <Section title="Training Box">
+{renderAircraft(
+  Object.keys(trainingBox),
+  [
+    { label: "Joining Visual Circuit", onClick: moveToVisualFromTrainingBox },
+    { label: "Proceed to Local IR", onClick: moveToLocalIRFromTrainingBox }
+  ]
+)}
+    </Section>
+  </div>
+</div>
 
       <Section title={`Visual Circuit (${visualCircuit.length})`}>
         {renderAircraft(visualCircuit, [
@@ -564,43 +444,47 @@ const renderAircraft = (
         ])}
       </Section>
 
-    <Container>
-      <Section title={`Holding Point (${holdingPoint.length})`}>
-        {renderAircraft(holdingPoint, [
-          { label: "--> Visual Circuit", onClick: moveToVisualFromHolding },
-          { label: "<-- Return to stand", onClick: moveBackToTaxiing },
-        ], true)}
-      </Section>
+<div style={{ display: "flex", width: "100%", marginBottom: "25px" }}>
+  <div style={{ flex: 1, marginRight: "10px" }}>
+    <Section title="Holding Point">
+      {renderAircraft(holdingPoint, [
+        { label: "--> Visual Circuit", onClick: moveToVisualFromHolding },
+        { label: "<-- Return to stand", onClick: moveBackToTaxiing },
+      ], true)}
+    </Section>
+  </div>
 
-      <Section title={`Taxiing Aircraft (${taxiing.length})`}>
-        {renderAircraft(taxiing, [
-          { label: "--> Holding Point", onClick: moveToHoldingPoint },
-          { label: "<-- Apron", onClick: moveBackToApron },
-        ])}
-      </Section>
-    </Container>
+  <div style={{ flex: 1, marginLeft: "10px" }}>
+    <Section title="Taxiing Aircraft">
+      {renderAircraft(taxiing, [
+        { label: "--> Holding Point", onClick: moveToHoldingPoint },
+        { label: "<-- Apron", onClick: moveBackToApron },
+      ])}
+    </Section>
+  </div>
+</div>
 
-      <Section title="Apron">
-        {renderAircraft(apron, [{ label: "->>Taxi", onClick: moveToTaxiFromApron }])}
-        <div style={{ marginTop: "var(--ui-margin)" }}>
-          <input
-            type="text"
-            value={newReg}
-            onChange={(e) => setNewReg(e.target.value)}
-            placeholder="Új lajstrom"
-            style={{ padding: "var(--ui-padding)", borderRadius: "8px", fontSize: "var(--ui-font-size)", color: "black" }}
-          />
-<button
-  onClick={addAircraftToApron}
-  style={{ padding: "var(--ui-padding) 16px", fontSize: "var(--ui-font-size)", backgroundColor: "rgb(40, 167, 69)", color: "white", borderRadius: "8px", cursor: "pointer", border: "none" }}
->
-  Hozzáadás
-</button>
-        </div>
-      </Section>
-	  
-	  
-	   
+<Section title="Apron">
+  {renderAircraft(
+    [...apron].sort((a, b) => a.localeCompare(b)), // Sort the array alphabetically
+    [{ label: "->>Taxi", onClick: moveToTaxiFromApron }]
+  )}
+  <div className="flex gap-2" style={{ marginTop: "10px" }}>
+    <input
+      type="text"
+      value={newReg}
+      onChange={(e) => setNewReg(e.target.value)}
+      placeholder="Új lajstrom"
+      style={{ padding: "8px", borderRadius: "8px", fontSize: "16px", color: "black" }}
+    />
+    <button
+      onClick={addAircraftToApron}
+      style={{ padding: "8px 16px", fontSize: "16px", backgroundColor: "#28a745", color: "white", borderRadius: "8px", cursor: "pointer", border: "none" }}
+    >
+      Hozzáadás
+    </button>
+  </div>
+</Section>
 	  
 	  
 	  
@@ -639,12 +523,12 @@ const renderAircraft = (
               </button>
             ))}
             <div>
-<button
-  onClick={closeModal}
-  style={{ marginTop: "14px", padding: "10px 20px", fontSize: "16px", backgroundColor: "rgb(220, 53, 69)", color: "white", borderRadius: "8px", border: "none", cursor: "pointer" }}
->
-  Cancel
-</button>
+              <button
+                onClick={closeModal}
+                style={{ marginTop: "14px", padding: "10px 20px", fontSize: "16px", backgroundColor: "#dc3545", color: "white", borderRadius: "8px", border: "none", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
