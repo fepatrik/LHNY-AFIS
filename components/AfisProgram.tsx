@@ -18,44 +18,33 @@ const AfisProgram = () => {
   const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
 const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
 
-  const styles = {
-    container: {
-      display: "flex",
-      gap: `${15 * scale}px`,
-      flexWrap: "wrap",
-      justifyContent: "flex-start",
-      marginBottom: `${20 * scale}px`,
-    },
-    aircraftCard: {
-      flexBasis: `${22 * scale}%`,
-      maxWidth: `${220 * scale}px`,
-      minHeight: `${200 * scale}px`,
-      border: `${3 * scale}px solid white`,
-      borderRadius: `${15 * scale}px`,
-      padding: `${12 * scale}px`,
-      margin: `${5 * scale}px`,
-      textAlign: "center",
-      boxSizing: "border-box",
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
-      color: "white",
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      fontSize: `${18 * scale}px`,
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "space-between",
-    },
-    mediaQueries: `
-      @media (max-width: ${1024 * scale}px) {
-        .aircraftCard {
-          flex-basis: ${45 * scale}%;
-          max-width: 100%;
-        }
-        .container {
-          gap: ${10 * scale}px;
-        }
-      }
-    `,
-  };
+const styles = {
+  container: {
+    display: "flex",
+    gap: `${15 * scale}px`,
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    marginBottom: `${20 * scale}px`,
+  } as React.CSSProperties,
+  aircraftCard: {
+    flexBasis: `${22 * scale}%`,
+    maxWidth: `${220 * scale}px`,
+    minHeight: `${200 * scale}px`,
+    border: `${3 * scale}px solid white`,
+    borderRadius: `${15 * scale}px`,
+    padding: `${12 * scale}px`,
+    margin: `${5 * scale}px`,
+    textAlign: "center",
+    boxSizing: "border-box",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    color: "white",
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    fontSize: `${18 * scale}px`,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+  } as React.CSSProperties,
+};
 
 
 const getCurrentTime = () => {
