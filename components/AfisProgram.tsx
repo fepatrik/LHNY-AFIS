@@ -416,7 +416,7 @@ style={{
   <div style={{ flex: 1, marginRight: "10px" }}>
 <Section title="Local IR">
   {renderAircraft(localIR, [
-    { label: "Joining Visual Circuit", onClick: moveToVisualCircuitFromLocalIR },
+    { label: "Join VC", onClick: moveToVisualCircuitFromLocalIR },
     { label: "Runway Vacated", onClick: moveToTaxiingFromLocalIR }, // Add the new button here
   ])}
 </Section>
@@ -427,8 +427,8 @@ style={{
 {renderAircraft(
   Object.keys(trainingBox),
   [
-    { label: "Joining Visual Circuit", onClick: moveToVisualFromTrainingBox },
-    { label: "Proceed to Local IR", onClick: moveToLocalIRFromTrainingBox }
+    { label: "Join VC", onClick: moveToVisualFromTrainingBox },
+    { label: "Local IR", onClick: moveToLocalIRFromTrainingBox }
   ]
 )}
     </Section>
@@ -438,9 +438,9 @@ style={{
       <Section title={`Visual Circuit (${visualCircuit.length})`}>
         {renderAircraft(visualCircuit, [
           { label: "Runway Vacated", onClick: moveToTaxiingFromVisual },
-          { label: "Proceed to TB", onClick: openModal },
-          { label: "Proceed to Local IR", onClick: moveToLocalIR },
-          { label: "Proceed to Cross Country", onClick: moveToCrossCountry }
+          { label: "Training Box", onClick: openModal },
+          { label: "Local IR", onClick: moveToLocalIR },
+          { label: "Cross Country", onClick: moveToCrossCountry }
         ])}
       </Section>
 
@@ -448,8 +448,8 @@ style={{
   <div style={{ flex: 1, marginRight: "10px" }}>
     <Section title="Holding Point">
       {renderAircraft(holdingPoint, [
-        { label: "--> Visual Circuit", onClick: moveToVisualFromHolding },
-        { label: "<-- Return to stand", onClick: moveBackToTaxiing },
+        { label: "Visual Circuit", onClick: moveToVisualFromHolding },
+        { label: "Return to Stand", onClick: moveBackToTaxiing },
       ], true)}
     </Section>
   </div>
@@ -457,8 +457,8 @@ style={{
   <div style={{ flex: 1, marginLeft: "10px" }}>
     <Section title="Taxiing Aircraft">
       {renderAircraft(taxiing, [
-        { label: "--> Holding Point", onClick: moveToHoldingPoint },
-        { label: "<-- Apron", onClick: moveBackToApron },
+        { label: "Holding Point", onClick: moveToHoldingPoint },
+        { label: "Apron", onClick: moveBackToApron },
       ])}
     </Section>
   </div>
@@ -467,7 +467,7 @@ style={{
 <Section title="Apron">
   {renderAircraft(
     [...apron].sort((a, b) => a.localeCompare(b)), // Sort the array alphabetically
-    [{ label: "->>Taxi", onClick: moveToTaxiFromApron }]
+    [{ label: "Taxi", onClick: moveToTaxiFromApron }]
   )}
   <div className="flex gap-2" style={{ marginTop: "10px" }}>
     <input
