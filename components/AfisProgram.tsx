@@ -424,7 +424,7 @@ const renderAircraft = (
 
 
 
-<Section title="AFIS Program - by Ludwig Schwarz Software Company">
+<Section title="LHNY AFIS - by Ludwig Schwarz Software Company">
   <input
     type="range"
     style={{ width: '600px' }} // Fix szélesség, nem hat a skála
