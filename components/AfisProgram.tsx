@@ -579,7 +579,7 @@ const renderAircraft = (
             color: "white"
           }}>
             <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Choose TB for {selectedAircraft}:</h3>
-            {["1", "2", "3", "4", "5", "6","7", "5-6","1-2","2-3","1-2-3", "100",].map((box) => (
+            {["1", "2", "3", "4", "5", "6","7", "5-6","1-2","2-3","1-2-3", "100","PROCEEDING TO VC"].map((box) => (
               <button
                 key={box}
                 onClick={() => handleTrainingBoxSelection(box)}
