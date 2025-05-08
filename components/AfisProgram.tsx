@@ -18,6 +18,8 @@ const AfisProgram = () => {
   const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
 const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
 const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
+const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
+
 
 const styles = {
   container: {
@@ -29,7 +31,7 @@ const styles = {
   } as React.CSSProperties,
   aircraftCard: {
     flexBasis: `${22 * scale}%`,
-    maxWidth: `${180 * scale}px`,
+      maxWidth: `${boxWidth}px`, // Dinamikus szélesség
     minHeight: `${20 * scale}px`,
     border: `${3 * scale}px solid white`,
     borderRadius: `${15 * scale}px`,
@@ -137,6 +139,11 @@ const moveToTaxiingFromVisual = (reg: string) => {
       landed: getCurrentTime()
     }
   }));
+};
+
+const resetSizes = () => {
+  setScale(1);     // Alapértelmezett skála
+  setBoxWidth(180); // Alapértelmezett szélesség
 };
 
   const moveToVisualCircuitFromLocalIR = (reg: string) => {
@@ -399,35 +406,36 @@ const renderAircraft = (
             </div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: `${6 * scale}px`, marginTop: `${10 * scale}px` }}>
-            {actions.map(({ label, onClick }) => (
-              <button
-                key={label}
-                style={{
-                  width: "100%",
-                  padding: `${10 * scale}px`,
-      backgroundColor:
-        label === "Return to Stand" // Ellenőrizzük, hogy a cím "Return to stand"-e
-          ? "#dc3545" // Piros szín
-          : label === "Proceed to TB" || label === "Proceed to Local IR" || label === "Proceed to Cross Country"
-          ? "#28a745" // Zöld szín a Proceed gombokhoz
-          : label.includes("<--") || label.includes("Vacated") || label.includes("Apron")
-          ? "#dc3545" // További piros gombok
-          : "#28a745", // Alapértelmezett zöld szín
-      color: "white",
-                  fontSize: `${16 * scale}px`,
-                  fontWeight: "bold",
-                  borderRadius: `${10 * scale}px`,
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                }}
-                onClick={() => onClick(reg)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+<div style={{
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr", // 2 oszlop
+  gap: `${6 * scale}px`, // Távolság a gombok között
+  marginTop: `${10 * scale}px`
+}}>
+  {actions.map(({ label, onClick }, index) => (
+    <button
+      key={label}
+      style={{
+        padding: `${8 * scale}px`, // Csökkentett padding
+        backgroundColor:
+          label === "Return to Stand" ? "#dc3545" :
+          label === "Proceed to TB" || label === "Proceed to Local IR" || label === "Proceed to Cross Country" ? "#28a745" :
+          label.includes("<--") || label.includes("Vacated") || label.includes("Apron") ? "#dc3545" : "#28a745",
+        color: "white",
+        fontSize: `${14 * scale}px`, // Csökkentett betűméret
+        fontWeight: "bold",
+        borderRadius: `${8 * scale}px`, // Csökkentett border-radius
+        border: "none",
+        cursor: "pointer",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        gridColumn: actions.length === 1 || actions.length % 2 !== 0 && index === actions.length - 1 ? "span 2" : undefined, // Ha egy gomb van, vagy utolsó gomb páratlan számban, töltsön ki két oszlopot
+      }}
+      onClick={() => onClick(reg)}
+    >
+      {label}
+    </button>
+  ))}
+</div>
         </div>
       );
     })}
@@ -450,6 +458,7 @@ const renderAircraft = (
 
 
 <Section title="LHNY AFIS - by Ludwig Schwarz Software Company">
+    <h2>Size:</h2>
   <input
     type="range"
     style={{ width: '600px' }} // Fix szélesség, nem hat a skála
@@ -459,15 +468,33 @@ const renderAircraft = (
     value={scale}
     onChange={(e) => setScale(parseFloat(e.target.value))} // A skálaérték frissítése
   />
-  <div
-    style={{
-      marginTop: '20px', // Fix margin, nem változik a skálával
-      padding: '10px', // Fix padding, nem változik a skálával
-      fontSize: '16px', // Fix betűméret, nem változik a skálával
-    }}
-  >
-    Adjust scaling with the slider. Click on active training box to switch selected training box. Data is lost after refreshing the page!
-  </div>
+
+  <h2>Width:</h2>
+   <input
+    type="range"
+    style={{ width: '600px' }}
+    min="150" // Minimum érték 100px
+    max="300" // Maximum érték 300px
+    step="1" // Lépésköz 1px
+    value={boxWidth}
+    onChange={(e) => setBoxWidth(parseInt(e.target.value))} // boxWidth frissítése
+  />
+      <p>Adjust sizes with the slider. Click on active training box to switch selected training box. Data is lost after refreshing the page!</p>
+<button
+  style={{
+    marginTop: '10px',
+    padding: '10px 20px',
+    fontSize: '16px',
+    backgroundColor: '#007BFF',
+    color: 'white',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer'
+  }}
+  onClick={resetSizes}
+>
+  Reset size to default
+</button>
 </Section>
 
 
@@ -495,6 +522,7 @@ const renderAircraft = (
   {renderAircraft(localIR, [
     { label: "Join VC", onClick: moveToVisualCircuitFromLocalIR },
     { label: "Training Box", onClick: openModal }, // Új gomb hozzáadása
+	{ label: "Cross Country", onClick: moveToCrossCountry }, // Új gomb hozzáadása
 	{ label: "Runway Vacated", onClick: moveToTaxiingFromLocalIR }
   ])}
 </Section>
@@ -515,8 +543,9 @@ const renderAircraft = (
 
       <Section title={`Visual Circuit (${visualCircuit.length})`}>
         {renderAircraft(visualCircuit, [
-          { label: "Training Box", onClick: openModal },
-          { label: "Local IR", onClick: moveToLocalIR },
+         { label: "Local IR", onClick: moveToLocalIR },         
+		 { label: "Training Box", onClick: openModal },
+
           { label: "Cross Country", onClick: moveToCrossCountry },
 		  { label: "Runway Vacated", onClick: moveToTaxiingFromVisual }
         ])}
@@ -561,9 +590,9 @@ const renderAircraft = (
       .filter((reg) => reg.includes(searchTerm)) // Szűrés a keresési feltétel alapján
       .sort((a, b) => a.localeCompare(b)), // Sort the array alphabetically
     [
-      { label: "Taxi", onClick: moveToTaxiFromApron },
       { label: "Holding Point", onClick: moveToHoldingPointFromApron },
-      { label: "Cross Country", onClick: moveToCrossCountryFromApron }, // Új gomb hozzáadása
+	  { label: "Taxi", onClick: moveToTaxiFromApron },
+      { label: "Cross Country", onClick: moveToCrossCountryFromApron } // Új gomb hozzáadása
     ]
   )}
   <div className="flex gap-2" style={{ marginTop: "10px" }}>
@@ -571,7 +600,7 @@ const renderAircraft = (
       type="text"
       value={newReg}
       onChange={(e) => setNewReg(e.target.value.toUpperCase())} // Kisbetűk nagybetűvé alakítása
-      placeholder="Új lajstrom"
+      placeholder="New registration"
       style={{
         padding: "8px",
         borderRadius: "8px",
@@ -592,7 +621,7 @@ const renderAircraft = (
         border: "none",
       }}
     >
-      Hozzáadás
+      Add aircraft to apron
     </button>
   </div>
 </Section>
