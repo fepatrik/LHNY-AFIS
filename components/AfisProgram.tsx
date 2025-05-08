@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from "react";
+import Cookies from "js-cookie";
+
 
 const AfisProgram = () => {
   const [taxiing, setTaxiing] = useState<string[]>([]);
