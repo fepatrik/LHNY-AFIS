@@ -353,7 +353,7 @@ const renderAircraft = (
                 onChange={(e) => handleLocalIRChange(reg, 'procedure', e.target.value)}
                 style={{ marginBottom: `${8 * scale}px`, padding: `${6 * scale}px`, borderRadius: `${6 * scale}px` }}
               >
-                {["---", "NDB Traffic Pattern", "Holding NYR", "Holding PQ", "RNP Z", "RNP Y", "RNP Y Circle to Land", "RNP Z Circle to Land", "VOR APP", "NDB APP"].map(option => (
+                {["---", "NDB Traffic Pattern", "Holding NYR", "Holding PQ", "RNP Z", "RNP Y", "RNP Y Circle to Land", "RNP Z Circle to Land", "VOR APP", "VOR TEMPO", "NDB APP", "NDB TEMPO", "BOR APP", "NDB NCS"].map(option => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
