@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 
-
 const AfisProgram = () => {
   const [taxiing, setTaxiing] = useState<string[]>([]);
   const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
@@ -28,15 +27,15 @@ const styles = {
     gap: `${15 * scale}px`,
     flexWrap: "wrap",
     justifyContent: "flex-start",
-    marginBottom: `${20 * scale}px`,
+    marginBottom: `${2 * scale}px`,
   } as React.CSSProperties,
   aircraftCard: {
-    flexBasis: `${22 * scale}%`,
+    flexBasis: `${18 * scale}%`,
       maxWidth: `${boxWidth}px`, // Dinamikus szélesség
     minHeight: `${20 * scale}px`,
     border: `${3 * scale}px solid white`,
     borderRadius: `${15 * scale}px`,
-    padding: `${12 * scale}px`,
+    padding: `${10 * scale}px`,
     margin: `${5 * scale}px`,
     textAlign: "center",
     boxSizing: "border-box",
@@ -314,7 +313,7 @@ const renderAircraft = (
             fontSize: `${18 * scale}px`, // Betűméret szorzása a scale értékével
           }}
         >
-          <div style={{ fontWeight: "bold", fontSize: `${24 * scale}px`, marginBottom: `${10 * scale}px` }}>
+          <div style={{ fontWeight: "bold", fontSize: `${20 * scale}px`, marginBottom: `${10 * scale}px` }}>
             {index + 1}. {reg}
           </div>
 
@@ -354,7 +353,7 @@ const renderAircraft = (
                 onChange={(e) => handleLocalIRChange(reg, 'procedure', e.target.value)}
                 style={{ marginBottom: `${8 * scale}px`, padding: `${6 * scale}px`, borderRadius: `${6 * scale}px` }}
               >
-                {["---", "NDB Traffic Pattern", "Holding NYR", "Holding PQ", "RNP Z", "RNP Y", "RNP Y Circle to Land", "RNP Z Circle to Land", "VOR APP", "TEMPO VOR","TEMPO NDB", "NDB APP","BOR APP"].map(option => (
+                {["---", "NDB Traffic Pattern", "Holding NYR", "Holding PQ", "RNP Z", "RNP Y", "RNP Y Circle to Land", "RNP Z Circle to Land", "VOR APP", "NDB APP"].map(option => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
