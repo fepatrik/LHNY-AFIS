@@ -350,13 +350,15 @@ const renderAircraft = (
 		
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: `${10 * scale}px` }}>
             <div style={{
-              fontWeight: "bold",
-              fontSize: `${20 * scale}px`,
-              flex: 1, // Kitöltés a gombig
-              textAlign: "center", // Középre igazított szöveg
-            }}>
-              {index + 1}. {reg}
-            </div>
+  fontWeight: "bold",
+  fontSize: `${20 * scale}px`,
+  flex: 1,
+  textAlign: "center",
+}}>
+  {regs === visualCircuit ? `${index + 1}. ` : ""}{reg}
+</div>
+
+
 			
 <button
   onClick={() => toggleTGFSStatus(reg)}
@@ -392,6 +394,7 @@ const renderAircraft = (
               {isDual ? 'DUAL' : 'SOLO'}
             </button>
           </div>
+		  
 
           {isCrossCountry && (
             <div style={{ marginBottom: `${10 * scale}px` }}>
