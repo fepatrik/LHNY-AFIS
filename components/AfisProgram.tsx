@@ -551,7 +551,7 @@ const renderAircraft = (
     value={boxWidth}
     onChange={(e) => setBoxWidth(parseInt(e.target.value))} // boxWidth frissítése
   />
-      <p>Adjust sizes with the slider. Click on active training box to switch selected training box. Data is lost after refreshing the page!</p>
+      <p><strong>Adjust sizes with the slider. All data is lost after refreshing the page!</strong></p>
 <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
   <button
     style={{
