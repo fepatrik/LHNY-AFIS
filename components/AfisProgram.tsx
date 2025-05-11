@@ -768,7 +768,7 @@ const renderAircraft = (
   {showTable && (
     <table
       style={{
-        width: "400px",
+        width: "800px",
         borderCollapse: "collapse",
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         color: "white",
