@@ -165,8 +165,17 @@ const moveToTaxiingFromVisual = (reg: string) => {
     ...prev,
     [reg]: {
       ...prev[reg],
-      landed: getCurrentTime()
+      landed: getCurrentTime(),
     }
+  }));
+  // Reset to default states
+  setAircraftStatuses((prev) => ({
+    ...prev,
+    [reg]: 'DUAL',
+  }));
+  setAircraftTGStatus((prev) => ({
+    ...prev,
+    [reg]: 'T/G',
   }));
 };
 
@@ -215,7 +224,17 @@ const moveBackToApron = (reg: string) => {
     delete updatedTimestamps[reg]; // Reset timestamp when moving back to Apron
     return updatedTimestamps;
   });
+  // Reset to default states
+  setAircraftStatuses((prev) => ({
+    ...prev,
+    [reg]: 'DUAL',
+  }));
+  setAircraftTGStatus((prev) => ({
+    ...prev,
+    [reg]: 'T/G',
+  }));
 };
+
 
 const moveToTrainingBox = (reg: string, box: string) => {
   setVisualCircuit(visualCircuit.filter((r) => r !== reg));
