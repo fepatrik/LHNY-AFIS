@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 
 const AfisProgram = () => {
+const [showTable, setShowTable] = useState(true);
   const [taxiing, setTaxiing] = useState<string[]>([]);
   const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
   const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
@@ -746,33 +747,66 @@ const renderAircraft = (
 </Section>
 
 <Section title="Flight Log">
-  <table style={{ width: "30%", borderCollapse: "collapse", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: "white", marginLeft: "0" }}>
-    <thead>
-      <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
-        <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
-        <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
-        <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
-        <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
-      </tr>
-    </thead>
-    <tbody>
-      {flightLog
-        .slice() // Másolat készítése a tömbről, hogy az eredeti állapot ne változzon
-        .sort((a, b) => {
-          const timeA = a.takeoff === "" ? Infinity : new Date(`1970-01-01T${a.takeoff}:00`).getTime();
-          const timeB = b.takeoff === "" ? Infinity : new Date(`1970-01-01T${b.takeoff}:00`).getTime();
-          return timeA - timeB;
-        })
-        .map(({ reg, takeoff, landed }, index) => (
-          <tr key={index} style={{ backgroundColor: index % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)" }}>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{index + 1}</td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff}</td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed}</td>
-          </tr>
-        ))}
-    </tbody>
-  </table>
+  <div style={{ marginBottom: "10px" }}>
+    <button
+      onClick={() => setShowTable((prev) => !prev)}
+      style={{
+        padding: "10px 20px",
+        fontSize: "16px",
+        backgroundColor: "#007BFF",
+        color: "white",
+        borderRadius: "8px",
+        border: "none",
+        cursor: "pointer",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      }}
+    >
+      {showTable ? "Hide Table" : "Show Table"}
+    </button>
+  </div>
+
+  {showTable && (
+    <table
+      style={{
+        width: "400px",
+        borderCollapse: "collapse",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        color: "white",
+        marginLeft: "0",
+      }}
+    >
+      <thead>
+        <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
+          <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
+          <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
+          <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
+          <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {flightLog
+          .slice() // Másolat készítése a tömbről, hogy az eredeti állapot ne változzon
+          .sort((a, b) => {
+            const timeA = a.takeoff === "N/A" ? Infinity : new Date(`1970-01-01T${a.takeoff}:00`).getTime();
+            const timeB = b.takeoff === "N/A" ? Infinity : new Date(`1970-01-01T${b.takeoff}:00`).getTime();
+            return timeA - timeB;
+          })
+          .map(({ reg, takeoff, landed }, index) => (
+            <tr
+              key={index}
+              style={{
+                backgroundColor: index % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
+              }}
+            >
+              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{index + 1}</td>
+              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
+              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff}</td>
+              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed}</td>
+            </tr>
+          ))}
+      </tbody>
+    </table>
+  )}
 </Section>
 	  
 	  
