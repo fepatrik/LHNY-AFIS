@@ -1,35 +1,91 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const AfisProgram = () => {
-const [showTable, setShowTable] = useState(true);
-  const [taxiing, setTaxiing] = useState<string[]>([]);
-  const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
-  const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
-  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>({});
-  const [crossCountry, setCrossCountry] = useState<string[]>([]);
-  const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
-  const [newReg, setNewReg] = useState<string>("");
-  const [localIR, setLocalIR] = useState<string[]>([]);
-  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>({});
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [selectedAircraft, setSelectedAircraft] = useState<string>("");
-  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
-  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
-const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
-const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
-const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
-  const [flightLog, setFlightLog] = useState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>([]);
+  // LocalStorage alapú állapotkezelés
+  const useLocalStorageState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
+    const [state, setState] = useState<T>(() => {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : defaultValue;
+    });
 
-  const addFlightLog = (reg: string, takeoff: string | "", landed: string | "") => {
-    setFlightLog((prevLog) => [
-      ...prevLog,
-      { reg, takeoff, landed },
-    ]);
+    useEffect(() => {
+      localStorage.setItem(key, JSON.stringify(state));
+    }, [key, state]);
+
+    return [state, setState];
   };
 
-const [aircraftTGStatus, setAircraftTGStatus] = useState<{ [key: string]: 'T/G' | 'F/S' }>({});
+
+  const [taxiing, setTaxiing] = useLocalStorageState<string[]>("taxiing", []);
+  const [holdingPoint, setHoldingPoint] = useLocalStorageState<string[]>("holdingPoint", []);
+  const [visualCircuit, setVisualCircuit] = useLocalStorageState<string[]>("visualCircuit", []);
+  const [trainingBox, setTrainingBox] = useLocalStorageState<{ [key: string]: string }>("trainingBox", {});
+  const [crossCountry, setCrossCountry] = useLocalStorageState<string[]>("crossCountry", []);
+  const [apron, setApron] = useLocalStorageState<string[]>("apron", ["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
+  const [newReg, setNewReg] = useLocalStorageState<string>("newReg", "");
+  const [localIR, setLocalIR] = useLocalStorageState<string[]>("localIR", []);
+  const [localIRDetails, setLocalIRDetails] = useLocalStorageState<{ [key: string]: { procedure: string; height: string; clearance: string } }>("localIRDetails", {});
+  const [isModalOpen, setIsModalOpen] = useLocalStorageState<boolean>("isModalOpen", false);
+  const [selectedAircraft, setSelectedAircraft] = useLocalStorageState<string>("selectedAircraft", "");
+  const [crossCountryFrequency, setCrossCountryFrequency] = useLocalStorageState<{ [key: string]: boolean }>("crossCountryFrequency", {});
+  const [timestamps, setTimestamps] = useLocalStorageState<{ [key: string]: { takeoff?: string; landed?: string } }>("timestamps", {});
+  const [scale, setScale] = useLocalStorageState<number>("scale", 1);
+  const [searchTerm, setSearchTerm] = useLocalStorageState<string>("searchTerm", "");
+  const [boxWidth, setBoxWidth] = useLocalStorageState<number>("boxWidth", 180);
+  const [showTable, setShowTable] = useLocalStorageState<boolean>("showTable", true);
+  const [flightLog, setFlightLog] = useLocalStorageState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>("flightLog", []);
+  const [detailedFlightLog, setDetailedFlightLog] = useLocalStorageState<{
+    serial: number;
+    reg: string;
+    takeoff: string | "";
+    landed: string | "";
+    squawk: string;
+    crew: string;
+  }[]>("detailedFlightLog", []);
+
+const handleSquawkChange = (serial: number, newSquawk: string) => {
+  setDetailedFlightLog((prevLog) =>
+    prevLog.map((entry) =>
+      entry.serial === serial ? { ...entry, squawk: newSquawk } : entry
+    )
+  );
+};
+
+const handleCrewChange = (serial: number, newCrew: string) => {
+  setDetailedFlightLog((prevLog) =>
+    prevLog.map((entry) =>
+      entry.serial === serial ? { ...entry, crew: newCrew } : entry
+    )
+  );
+};
+
+  const addFlightLog = (reg: string, takeoff: string | "", landed: string | "", squawk: string, crew: string) => {
+    setDetailedFlightLog((prevLog) => [
+      ...prevLog,
+      {
+        serial: prevLog.length + 1,
+        reg,
+        takeoff,
+        landed,
+        squawk,
+        crew,
+      },
+    ]);
+  };
+  
+const updateLandingTime = (reg: string, landed: string) => {
+  setDetailedFlightLog((prevLog) =>
+    prevLog.map((entry) =>
+      entry.reg === reg && !entry.landed // Csak ha még nincs landolási idő
+        ? { ...entry, landed } // Frissítjük az adatot
+        : entry // Egyébként érintetlenül hagyjuk
+    )
+  );
+};
+
+  const [aircraftTGStatus, setAircraftTGStatus] = useLocalStorageState<{ [key: string]: 'T/G' | 'F/S' }>("aircraftTGStatus", {});
 const toggleTGFSStatus = (reg: string) => {
   setAircraftTGStatus((prevStatuses) => {
     const currentStatus = prevStatuses[reg] || 'T/G';
@@ -43,8 +99,9 @@ const toggleTGFSStatus = (reg: string) => {
 
 
 // Add a new state to handle the aircraft statuses
-const [aircraftStatuses, setAircraftStatuses] = useState<{ [key: string]: 'DUAL' | 'SOLO' }>({});
-const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
+
+  const [aircraftStatuses, setAircraftStatuses] = useLocalStorageState<{ [key: string]: 'DUAL' | 'SOLO' }>("aircraftStatuses", {});
+  const [isHelpModalOpen, setIsHelpModalOpen] = useLocalStorageState<boolean>("isHelpModalOpen", false);
 
 // Function to toggle the status of an aircraft
 const toggleAircraftStatus = (reg: string) => {
@@ -88,10 +145,10 @@ const styles = {
 };
 
 
-const getCurrentTime = () => {
-  const now = new Date();
-  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-};
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
 
 
 
@@ -143,7 +200,7 @@ const moveBackToTaxiing = (reg: string) => {
   });
 };
 
-  const moveToVisualFromHolding = (reg: string) => {
+const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
     setHoldingPoint((prev) => prev.filter((r) => r !== reg));
     setVisualCircuit((prev) => [...prev, reg]);
     const takeoffTime = getCurrentTime();
@@ -155,23 +212,29 @@ const moveBackToTaxiing = (reg: string) => {
       },
     }));
     // Add to flight log
-    addFlightLog(reg, takeoffTime, "");
+    addFlightLog(reg, takeoffTime, "", squawk, crew);
   };
 
 const moveToTaxiingFromLocalIR = (reg: string) => {
   setLocalIR(localIR.filter((r) => r !== reg));
   setTaxiing([...taxiing, reg]);
+
+  const landedTime = getCurrentTime(); // Az aktuális idő lekérése
+
   setTimestamps((prev) => ({
     ...prev,
     [reg]: {
       ...prev[reg],
-      landed: getCurrentTime(),
-    }
+      landed: landedTime, // Leszállási idő mentése
+    },
   }));
+
+  // Frissítsük a detailedFlightLog-ot a leszállási idővel
+  updateLandingTime(reg, landedTime);
 };
 
 
-  const moveToTaxiingFromVisual = (reg: string) => {
+const moveToTaxiingFromVisual = (reg: string) => {
     setVisualCircuit((prev) => prev.filter((r) => r !== reg));
     setTaxiing((prev) => [...prev, reg]);
     const landedTime = getCurrentTime();
@@ -183,11 +246,8 @@ const moveToTaxiingFromLocalIR = (reg: string) => {
       },
     }));
     // Update the flight log with landing time
-    setFlightLog((prevLog) =>
-      prevLog.map((entry) =>
-        entry.reg === reg ? { ...entry, landed: landedTime } : entry
-      )
-    );
+  updateLandingTime(reg, landedTime); // Biztosítjuk, hogy csak üres mezőt frissít
+
     // Reset to default states
     setAircraftStatuses((prev) => ({
       ...prev,
@@ -746,68 +806,120 @@ const renderAircraft = (
   </div>
 </Section>
 
-<Section title="Flight Log">
-  <div style={{ marginBottom: "10px" }}>
-    <button
-      onClick={() => setShowTable((prev) => !prev)}
-      style={{
-        padding: "10px 20px",
-        fontSize: "16px",
-        backgroundColor: "#007BFF",
-        color: "white",
-        borderRadius: "8px",
-        border: "none",
-        cursor: "pointer",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      }}
-    >
-      {showTable ? "Hide Table" : "Show Table"}
-    </button>
-  </div>
+      <Section title="Flight Log">
+        <div style={{ marginBottom: "10px" }}>
+          <button
+            onClick={() => setShowTable((prev) => !prev)}
+            style={{
+              padding: "10px 20px",
+              fontSize: "16px",
+              backgroundColor: "#007BFF",
+              color: "white",
+              borderRadius: "8px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            {showTable ? "Hide Table" : "Show Table"}
+          </button>
+        </div>
 
-  {showTable && (
-    <table
+{showTable && (() => {
+  const tables = []; // Tárolja az egyes táblázatokat
+  detailedFlightLog.forEach((entry, index) => {
+    const tableIndex = Math.floor(index / 33); // Új táblázat minden 33 sor után
+    if (!tables[tableIndex]) tables[tableIndex] = [];
+    tables[tableIndex].push(entry);
+  });
+
+  return tables.map((tableRows, tableIndex) => (
+    <div
+      key={tableIndex}
       style={{
-        width: "800px",
-        borderCollapse: "collapse",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        color: "white",
-        marginLeft: "0",
+        width: "40%", // Táblázat szélessége 40%
+        margin: "20px 0", // Külső margók (felső/alsó 20px, nincs jobb/bal margó)
+        overflowX: "auto", // Görgetés, ha a tartalom túl széles
+        textAlign: "left", // Balra igazítás
       }}
     >
-      <thead>
-        <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
-          <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        {flightLog
-          .slice() // Másolat készítése a tömbről, hogy az eredeti állapot ne változzon
-          .sort((a, b) => {
-            const timeA = a.takeoff === "N/A" ? Infinity : new Date(`1970-01-01T${a.takeoff}:00`).getTime();
-            const timeB = b.takeoff === "N/A" ? Infinity : new Date(`1970-01-01T${b.takeoff}:00`).getTime();
-            return timeA - timeB;
-          })
-          .map(({ reg, takeoff, landed }, index) => (
+      <table
+        style={{
+          width: "100%", // Táblázat teljes szélessége a konténerben
+          borderCollapse: "collapse",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          color: "white",
+        }}
+      >
+        <thead>
+          <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
+            <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
+            <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
+            <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
+            <th style={{ padding: "10px", border: "1px solid white" }}>Squawk</th>
+            <th style={{ padding: "10px", border: "1px solid white" }}>Crew</th>
+            <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tableRows.map(({ serial, reg, takeoff, landed, squawk, crew }) => (
             <tr
-              key={index}
+              key={serial}
               style={{
-                backgroundColor: index % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
+                backgroundColor: serial % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
               }}
             >
-              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{index + 1}</td>
+              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{serial}</td>
               <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
               <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff}</td>
+              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                <input
+                  type="text"
+                  value={squawk}
+                  maxLength={4}
+                  onChange={(e) => handleSquawkChange(serial, e.target.value)}
+                  style={{
+                    width: "80%",
+                    padding: "8px",
+                    borderRadius: "6px",
+                    textAlign: "center",
+                    border: "1px solid #ccc",
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    backgroundColor: "#fff",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    color: "#333",
+                  }}
+                />
+              </td>
+              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                <input
+                  type="text"
+                  value={crew}
+                  onChange={(e) => handleCrewChange(serial, e.target.value)}
+                  style={{
+                    width: "80%",
+                    padding: "8px",
+                    borderRadius: "6px",
+                    textAlign: "center",
+                    border: "1px solid #ccc",
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                    backgroundColor: "#fff",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    color: "#333",
+                  }}
+                />
+              </td>
               <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed}</td>
             </tr>
           ))}
-      </tbody>
-    </table>
-  )}
-</Section>
+        </tbody>
+      </table>
+    </div>
+  ));
+})()}
+      </Section>
+
 	  
 	  
 	  
