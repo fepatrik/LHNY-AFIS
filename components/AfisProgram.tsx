@@ -200,20 +200,20 @@ const moveBackToTaxiing = (reg: string) => {
   });
 };
 
-const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
-    setHoldingPoint((prev) => prev.filter((r) => r !== reg));
-    setVisualCircuit((prev) => [...prev, reg]);
-    const takeoffTime = getCurrentTime();
-    setTimestamps((prev) => ({
-      ...prev,
-      [reg]: {
-        ...prev[reg],
-        takeoff: takeoffTime,
-      },
-    }));
-    // Add to flight log
-    addFlightLog(reg, takeoffTime, "", squawk, crew);
-  };
+const moveToVisualFromHolding = (reg: string) => {
+  setHoldingPoint((prev) => prev.filter((r) => r !== reg));
+  setVisualCircuit((prev) => [...prev, reg]);
+  const takeoffTime = getCurrentTime();
+  setTimestamps((prev) => ({
+    ...prev,
+    [reg]: {
+      ...prev[reg],
+      takeoff: takeoffTime,
+    },
+  }));
+  // Add to flight log with default squawk and crew
+  addFlightLog(reg, takeoffTime, "", "defaultSquawk", "defaultCrew");
+};
 
 const moveToTaxiingFromLocalIR = (reg: string) => {
   setLocalIR(localIR.filter((r) => r !== reg));
