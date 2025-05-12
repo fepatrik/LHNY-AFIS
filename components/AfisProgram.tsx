@@ -720,7 +720,7 @@ const renderAircraft = (
   <div style={{ flex: 1, marginRight: "10px" }}>
     <Section title="Holding Point">
       {renderAircraft(holdingPoint, [
-        { label: "Visual Circuit", onClick: moveToVisualFromHolding },
+{ label: "Visual Circuit", onClick: (reg: string) => moveToVisualFromHolding(reg, "", "") },
         { label: "Return to Stand", onClick: moveBackToTaxiing },
       ], true)}
     </Section>
