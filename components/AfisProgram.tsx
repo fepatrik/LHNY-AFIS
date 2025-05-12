@@ -185,7 +185,7 @@ const moveBackToTaxiing = (reg: string) => {
   });
 };
 
-const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
+const moveToVisualFromHolding = (reg: string): void => {
     setHoldingPoint((prev) => prev.filter((r) => r !== reg));
     setVisualCircuit((prev) => [...prev, reg]);
     const takeoffTime = getCurrentTime();
