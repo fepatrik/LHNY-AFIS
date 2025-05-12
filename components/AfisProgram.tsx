@@ -1,55 +1,35 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 const AfisProgram = () => {
-  // LocalStorage alapú állapotkezelés
-const useLocalStorageState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-  const [state, setState] = useState<T>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(key);
-      return saved ? JSON.parse(saved) : defaultValue;
-    }
-    return defaultValue; // Alapértelmezett érték SSR alatt
-  });
+  const [taxiing, setTaxiing] = useState<string[]>([]);
+  const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
+  const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
+  const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>({});
+  const [crossCountry, setCrossCountry] = useState<string[]>([]);
+  const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
+  const [newReg, setNewReg] = useState<string>("");
+  const [localIR, setLocalIR] = useState<string[]>([]);
+  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>({});
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedAircraft, setSelectedAircraft] = useState<string>("");
+  const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
+  const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
+const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
+const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
+const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(key, JSON.stringify(state));
-    }
-  }, [key, state]);
-
-  return [state, setState];
-};
-
-
-  const [taxiing, setTaxiing] = useLocalStorageState<string[]>("taxiing", []);
-  const [holdingPoint, setHoldingPoint] = useLocalStorageState<string[]>("holdingPoint", []);
-  const [visualCircuit, setVisualCircuit] = useLocalStorageState<string[]>("visualCircuit", []);
-  const [trainingBox, setTrainingBox] = useLocalStorageState<{ [key: string]: string }>("trainingBox", {});
-  const [crossCountry, setCrossCountry] = useLocalStorageState<string[]>("crossCountry", []);
-  const [apron, setApron] = useLocalStorageState<string[]>("apron", ["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
-  const [newReg, setNewReg] = useLocalStorageState<string>("newReg", "");
-  const [localIR, setLocalIR] = useLocalStorageState<string[]>("localIR", []);
-  const [localIRDetails, setLocalIRDetails] = useLocalStorageState<{ [key: string]: { procedure: string; height: string; clearance: string } }>("localIRDetails", {});
-  const [isModalOpen, setIsModalOpen] = useLocalStorageState<boolean>("isModalOpen", false);
-  const [selectedAircraft, setSelectedAircraft] = useLocalStorageState<string>("selectedAircraft", "");
-  const [crossCountryFrequency, setCrossCountryFrequency] = useLocalStorageState<{ [key: string]: boolean }>("crossCountryFrequency", {});
-  const [timestamps, setTimestamps] = useLocalStorageState<{ [key: string]: { takeoff?: string; landed?: string } }>("timestamps", {});
-  const [scale, setScale] = useLocalStorageState<number>("scale", 1);
-  const [searchTerm, setSearchTerm] = useLocalStorageState<string>("searchTerm", "");
-  const [boxWidth, setBoxWidth] = useLocalStorageState<number>("boxWidth", 180);
-  const [showTable, setShowTable] = useLocalStorageState<boolean>("showTable", true);
-  const [flightLog, setFlightLog] = useLocalStorageState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>("flightLog", []);
-  const [detailedFlightLog, setDetailedFlightLog] = useLocalStorageState<{
+  const [showTable, setShowTable] = useState(true);
+  const [flightLog, setFlightLog] = useState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>([]);
+  const [detailedFlightLog, setDetailedFlightLog] = useState<{
     serial: number;
     reg: string;
     takeoff: string | "";
     landed: string | "";
     squawk: string;
     crew: string;
-  }[]>("detailedFlightLog", []);
-
+  }[]>([]);
 
 const handleSquawkChange = (serial: number, newSquawk: string) => {
   setDetailedFlightLog((prevLog) =>
@@ -91,7 +71,7 @@ const updateLandingTime = (reg: string, landed: string) => {
   );
 };
 
-  const [aircraftTGStatus, setAircraftTGStatus] = useLocalStorageState<{ [key: string]: 'T/G' | 'F/S' }>("aircraftTGStatus", {});
+const [aircraftTGStatus, setAircraftTGStatus] = useState<{ [key: string]: 'T/G' | 'F/S' }>({});
 const toggleTGFSStatus = (reg: string) => {
   setAircraftTGStatus((prevStatuses) => {
     const currentStatus = prevStatuses[reg] || 'T/G';
@@ -105,9 +85,8 @@ const toggleTGFSStatus = (reg: string) => {
 
 
 // Add a new state to handle the aircraft statuses
-
-  const [aircraftStatuses, setAircraftStatuses] = useLocalStorageState<{ [key: string]: 'DUAL' | 'SOLO' }>("aircraftStatuses", {});
-  const [isHelpModalOpen, setIsHelpModalOpen] = useLocalStorageState<boolean>("isHelpModalOpen", false);
+const [aircraftStatuses, setAircraftStatuses] = useState<{ [key: string]: 'DUAL' | 'SOLO' }>({});
+const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
 
 // Function to toggle the status of an aircraft
 const toggleAircraftStatus = (reg: string) => {
@@ -206,20 +185,20 @@ const moveBackToTaxiing = (reg: string) => {
   });
 };
 
-const moveToVisualFromHolding = (reg: string) => {
-  setHoldingPoint((prev) => prev.filter((r) => r !== reg));
-  setVisualCircuit((prev) => [...prev, reg]);
-  const takeoffTime = getCurrentTime();
-  setTimestamps((prev) => ({
-    ...prev,
-    [reg]: {
-      ...prev[reg],
-      takeoff: takeoffTime,
-    },
-  }));
-  // Add to flight log with default squawk and crew
-  addFlightLog(reg, takeoffTime, "", "defaultSquawk", "defaultCrew");
-};
+const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
+    setHoldingPoint((prev) => prev.filter((r) => r !== reg));
+    setVisualCircuit((prev) => [...prev, reg]);
+    const takeoffTime = getCurrentTime();
+    setTimestamps((prev) => ({
+      ...prev,
+      [reg]: {
+        ...prev[reg],
+        takeoff: takeoffTime,
+      },
+    }));
+    // Add to flight log
+    addFlightLog(reg, takeoffTime, "", squawk, crew);
+  };
 
 const moveToTaxiingFromLocalIR = (reg: string) => {
   setLocalIR(localIR.filter((r) => r !== reg));
