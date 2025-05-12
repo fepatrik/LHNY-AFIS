@@ -31,6 +31,21 @@ const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 1
     crew: string;
   }[]>([]);
 
+const handleSquawkChange = (serial: number, newSquawk: string) => {
+  setDetailedFlightLog((prevLog) =>
+    prevLog.map((entry) =>
+      entry.serial === serial ? { ...entry, squawk: newSquawk } : entry
+    )
+  );
+};
+
+const handleCrewChange = (serial: number, newCrew: string) => {
+  setDetailedFlightLog((prevLog) =>
+    prevLog.map((entry) =>
+      entry.serial === serial ? { ...entry, crew: newCrew } : entry
+    )
+  );
+};
 
   const addFlightLog = (reg: string, takeoff: string | "", landed: string | "", squawk: string, crew: string) => {
     setDetailedFlightLog((prevLog) => [
@@ -188,13 +203,19 @@ const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
 const moveToTaxiingFromLocalIR = (reg: string) => {
   setLocalIR(localIR.filter((r) => r !== reg));
   setTaxiing([...taxiing, reg]);
+
+  const landedTime = getCurrentTime(); // Az aktuális idő lekérése
+
   setTimestamps((prev) => ({
     ...prev,
     [reg]: {
       ...prev[reg],
-      landed: getCurrentTime(),
-    }
+      landed: landedTime, // Leszállási idő mentése
+    },
   }));
+
+  // Frissítsük a detailedFlightLog-ot a leszállási idővel
+  updateLandingTime(reg, landedTime);
 };
 
 
@@ -788,44 +809,92 @@ const renderAircraft = (
           </button>
         </div>
 
-        {showTable && (
-          <table
+{showTable && (() => {
+  const tables = []; // Tárolja az egyes táblázatokat
+  detailedFlightLog.forEach((entry, index) => {
+    const tableIndex = Math.floor(index / 33); // Új táblázat minden 33 sor után
+    if (!tables[tableIndex]) tables[tableIndex] = [];
+    tables[tableIndex].push(entry);
+  });
+
+  return tables.map((tableRows, tableIndex) => (
+    <table
+      key={tableIndex}
+      style={{
+        width: "100%",
+        borderCollapse: "collapse",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        color: "white",
+        marginBottom: "20px", // Távolság a táblázatok között
+      }}
+    >
+      <thead>
+        <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
+          <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
+          <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
+          <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
+          <th style={{ padding: "10px", border: "1px solid white" }}>Squawk</th>
+          <th style={{ padding: "10px", border: "1px solid white" }}>Crew</th>
+          <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {tableRows.map(({ serial, reg, takeoff, landed, squawk, crew }) => (
+          <tr
+            key={serial}
             style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-              color: "white",
+              backgroundColor: serial % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
             }}
           >
-            <thead>
-              <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
-                <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
-                <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
-                <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
-                <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
-                <th style={{ padding: "10px", border: "1px solid white" }}>Squawk</th>
-                <th style={{ padding: "10px", border: "1px solid white" }}>Crew</th>
-              </tr>
-            </thead>
-            <tbody>
-              {detailedFlightLog.map(({ serial, reg, takeoff, landed, squawk, crew }) => (
-                <tr
-                  key={serial}
-                  style={{
-                    backgroundColor: serial % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
-                  }}
-                >
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{serial}</td>
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff}</td>
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed}</td>
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{squawk}</td>
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{crew}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{serial}</td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff}</td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+              <input
+                type="text"
+                value={squawk}
+                maxLength={4}
+                onChange={(e) => handleSquawkChange(serial, e.target.value)}
+                style={{
+                  width: "80%",
+                  padding: "8px",
+                  borderRadius: "6px",
+                  textAlign: "center",
+                  border: "1px solid #ccc",
+                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  backgroundColor: "#fff",
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              />
+            </td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+              <input
+                type="text"
+                value={crew}
+                onChange={(e) => handleCrewChange(serial, e.target.value)}
+                style={{
+                  width: "80%",
+                  padding: "8px",
+                  borderRadius: "6px",
+                  textAlign: "center",
+                  border: "1px solid #ccc",
+                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  backgroundColor: "#fff",
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              />
+            </td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  ));
+})()}
       </Section>
 
 	  
