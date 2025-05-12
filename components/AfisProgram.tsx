@@ -4,18 +4,23 @@ import React, { useState, useEffect } from "react";
 
 const AfisProgram = () => {
   // LocalStorage alapú állapotkezelés
-  const useLocalStorageState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-    const [state, setState] = useState<T>(() => {
+const useLocalStorageState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
+  const [state, setState] = useState<T>(() => {
+    if (typeof window !== "undefined") {
       const saved = localStorage.getItem(key);
       return saved ? JSON.parse(saved) : defaultValue;
-    });
+    }
+    return defaultValue; // Alapértelmezett érték SSR alatt
+  });
 
-    useEffect(() => {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
       localStorage.setItem(key, JSON.stringify(state));
-    }, [key, state]);
+    }
+  }, [key, state]);
 
-    return [state, setState];
-  };
+  return [state, setState];
+};
 
 
   const [taxiing, setTaxiing] = useLocalStorageState<string[]>("taxiing", []);
@@ -44,6 +49,7 @@ const AfisProgram = () => {
     squawk: string;
     crew: string;
   }[]>("detailedFlightLog", []);
+
 
 const handleSquawkChange = (serial: number, newSquawk: string) => {
   setDetailedFlightLog((prevLog) =>
