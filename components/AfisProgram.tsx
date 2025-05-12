@@ -32,7 +32,6 @@ const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 1
   }[]>([]);
 
 
-
   const addFlightLog = (reg: string, takeoff: string | "", landed: string | "", squawk: string, crew: string) => {
     setDetailedFlightLog((prevLog) => [
       ...prevLog,
