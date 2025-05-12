@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 
 const AfisProgram = () => {
-const [showTable, setShowTable] = useState(true);
   const [taxiing, setTaxiing] = useState<string[]>([]);
   const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
   const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
@@ -20,14 +19,43 @@ const [showTable, setShowTable] = useState(true);
 const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
 const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
 const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
-  const [flightLog, setFlightLog] = useState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>([]);
 
-  const addFlightLog = (reg: string, takeoff: string | "", landed: string | "") => {
-    setFlightLog((prevLog) => [
+  const [showTable, setShowTable] = useState(true);
+  const [flightLog, setFlightLog] = useState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>([]);
+  const [detailedFlightLog, setDetailedFlightLog] = useState<{
+    serial: number;
+    reg: string;
+    takeoff: string | "";
+    landed: string | "";
+    squawk: string;
+    crew: string;
+  }[]>([]);
+
+
+
+  const addFlightLog = (reg: string, takeoff: string | "", landed: string | "", squawk: string, crew: string) => {
+    setDetailedFlightLog((prevLog) => [
       ...prevLog,
-      { reg, takeoff, landed },
+      {
+        serial: prevLog.length + 1,
+        reg,
+        takeoff,
+        landed,
+        squawk,
+        crew,
+      },
     ]);
   };
+  
+const updateLandingTime = (reg: string, landed: string) => {
+  setDetailedFlightLog((prevLog) =>
+    prevLog.map((entry) =>
+      entry.reg === reg && !entry.landed // Csak ha még nincs landolási idő
+        ? { ...entry, landed } // Frissítjük az adatot
+        : entry // Egyébként érintetlenül hagyjuk
+    )
+  );
+};
 
 const [aircraftTGStatus, setAircraftTGStatus] = useState<{ [key: string]: 'T/G' | 'F/S' }>({});
 const toggleTGFSStatus = (reg: string) => {
@@ -88,10 +116,10 @@ const styles = {
 };
 
 
-const getCurrentTime = () => {
-  const now = new Date();
-  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-};
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
 
 
 
@@ -143,7 +171,7 @@ const moveBackToTaxiing = (reg: string) => {
   });
 };
 
-  const moveToVisualFromHolding = (reg: string) => {
+const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
     setHoldingPoint((prev) => prev.filter((r) => r !== reg));
     setVisualCircuit((prev) => [...prev, reg]);
     const takeoffTime = getCurrentTime();
@@ -155,7 +183,7 @@ const moveBackToTaxiing = (reg: string) => {
       },
     }));
     // Add to flight log
-    addFlightLog(reg, takeoffTime, "");
+    addFlightLog(reg, takeoffTime, "", squawk, crew);
   };
 
 const moveToTaxiingFromLocalIR = (reg: string) => {
@@ -171,7 +199,7 @@ const moveToTaxiingFromLocalIR = (reg: string) => {
 };
 
 
-  const moveToTaxiingFromVisual = (reg: string) => {
+const moveToTaxiingFromVisual = (reg: string) => {
     setVisualCircuit((prev) => prev.filter((r) => r !== reg));
     setTaxiing((prev) => [...prev, reg]);
     const landedTime = getCurrentTime();
@@ -183,11 +211,8 @@ const moveToTaxiingFromLocalIR = (reg: string) => {
       },
     }));
     // Update the flight log with landing time
-    setFlightLog((prevLog) =>
-      prevLog.map((entry) =>
-        entry.reg === reg ? { ...entry, landed: landedTime } : entry
-      )
-    );
+  updateLandingTime(reg, landedTime); // Biztosítjuk, hogy csak üres mezőt frissít
+
     // Reset to default states
     setAircraftStatuses((prev) => ({
       ...prev,
@@ -746,68 +771,64 @@ const renderAircraft = (
   </div>
 </Section>
 
-<Section title="Flight Log">
-  <div style={{ marginBottom: "10px" }}>
-    <button
-      onClick={() => setShowTable((prev) => !prev)}
-      style={{
-        padding: "10px 20px",
-        fontSize: "16px",
-        backgroundColor: "#007BFF",
-        color: "white",
-        borderRadius: "8px",
-        border: "none",
-        cursor: "pointer",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      }}
-    >
-      {showTable ? "Hide Table" : "Show Table"}
-    </button>
-  </div>
+      <Section title="Flight Log">
+        <div style={{ marginBottom: "10px" }}>
+          <button
+            onClick={() => setShowTable((prev) => !prev)}
+            style={{
+              padding: "10px 20px",
+              fontSize: "16px",
+              backgroundColor: "#007BFF",
+              color: "white",
+              borderRadius: "8px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            {showTable ? "Hide Table" : "Show Table"}
+          </button>
+        </div>
 
-  {showTable && (
-    <table
-      style={{
-        width: "800px",
-        borderCollapse: "collapse",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        color: "white",
-        marginLeft: "0",
-      }}
-    >
-      <thead>
-        <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
-          <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        {flightLog
-          .slice() // Másolat készítése a tömbről, hogy az eredeti állapot ne változzon
-          .sort((a, b) => {
-            const timeA = a.takeoff === "N/A" ? Infinity : new Date(`1970-01-01T${a.takeoff}:00`).getTime();
-            const timeB = b.takeoff === "N/A" ? Infinity : new Date(`1970-01-01T${b.takeoff}:00`).getTime();
-            return timeA - timeB;
-          })
-          .map(({ reg, takeoff, landed }, index) => (
-            <tr
-              key={index}
-              style={{
-                backgroundColor: index % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
-              }}
-            >
-              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{index + 1}</td>
-              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
-              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff}</td>
-              <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed}</td>
-            </tr>
-          ))}
-      </tbody>
-    </table>
-  )}
-</Section>
+        {showTable && (
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+              color: "white",
+            }}
+          >
+            <thead>
+              <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
+                <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Squawk</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Crew</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detailedFlightLog.map(({ serial, reg, takeoff, landed, squawk, crew }) => (
+                <tr
+                  key={serial}
+                  style={{
+                    backgroundColor: serial % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
+                  }}
+                >
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{serial}</td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff}</td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed}</td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{squawk}</td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{crew}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
 	  
 	  
 	  
