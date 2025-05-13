@@ -791,111 +791,332 @@ const renderAircraft = (
   </div>
 </Section>
 
-      <Section title="Flight Log">
-        <div style={{ marginBottom: "10px" }}>
-          <button
-            onClick={() => setShowTable((prev) => !prev)}
-            style={{
-              padding: "10px 20px",
-              fontSize: "16px",
-              backgroundColor: "#007BFF",
-              color: "white",
-              borderRadius: "8px",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            {showTable ? "Hide Table" : "Show Table"}
-          </button>
-        </div>
-
-{showTable && (() => {
-  const tables = []; // Tárolja az egyes táblázatokat
-  detailedFlightLog.forEach((entry, index) => {
-    const tableIndex = Math.floor(index / 33); // Új táblázat minden 33 sor után
-    if (!tables[tableIndex]) tables[tableIndex] = [];
-    tables[tableIndex].push(entry);
-  });
-
-  return tables.map((tableRows, tableIndex) => (
-    <table
-      key={tableIndex}
+<Section title="Flight Log">
+  <div style={{ marginBottom: "10px" }}>
+    <button
+      onClick={() => setShowTable((prev) => !prev)}
       style={{
-        width: "100%",
-        borderCollapse: "collapse",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        padding: "10px 20px",
+        fontSize: "16px",
+        backgroundColor: "#007BFF",
         color: "white",
-        marginBottom: "20px", // Távolság a táblázatok között
+        borderRadius: "8px",
+        border: "none",
+        cursor: "pointer",
       }}
     >
-      <thead>
-        <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
-          <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Squawk</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Crew</th>
-          <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        {tableRows.map(({ serial, reg, takeoff, landed, squawk, crew }) => (
-          <tr
-            key={serial}
+      {showTable ? "Hide Table" : "Show Table"}
+    </button>
+  </div>
+
+  {showTable && (() => {
+    const tables = [];
+    detailedFlightLog.forEach((entry, index) => {
+      const tableIndex = Math.floor(index / 33);
+      if (!tables[tableIndex]) tables[tableIndex] = [];
+      tables[tableIndex].push(entry);
+    });
+
+    // Állapot a felugró ablakhoz
+    const [deleteRowIndex, setDeleteRowIndex] = useState<{ tableIndex: number; rowIndex: number } | null>(null);
+
+    const handleAddRow = (tableIndex: number, rowIndex: number) => {
+      const newEntry = {
+        serial: detailedFlightLog.length + 1,
+        reg: "",
+        takeoff: "",
+        landed: "",
+        squawk: "",
+        crew: "",
+        isNew: true,
+      };
+      const updatedLog = [...detailedFlightLog];
+      updatedLog.splice(tableIndex * 33 + rowIndex, 0, newEntry);
+      setDetailedFlightLog(
+        updatedLog.map((entry, idx) => ({ ...entry, serial: idx + 1 }))
+      );
+    };
+
+    const handleDeleteRow = () => {
+      if (deleteRowIndex) {
+        const { tableIndex, rowIndex } = deleteRowIndex;
+        const updatedLog = [...detailedFlightLog];
+        updatedLog.splice(tableIndex * 33 + rowIndex, 1);
+        setDetailedFlightLog(
+          updatedLog.map((entry, idx) => ({ ...entry, serial: idx + 1 }))
+        );
+        setDeleteRowIndex(null); // Modal bezárása
+      }
+    };
+
+    return (
+      <>
+        {tables.map((tableRows, tableIndex) => (
+          <table
+            key={tableIndex}
             style={{
-              backgroundColor: serial % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
+              width: "40%",
+              marginLeft: "0",
+              borderCollapse: "collapse",
+              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+              color: "white",
+              marginBottom: "20px",
             }}
           >
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{serial}</td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff}</td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
-              <input
-                type="text"
-                value={squawk}
-                maxLength={4}
-                onChange={(e) => handleSquawkChange(serial, e.target.value)}
-                style={{
-                  width: "80%",
-                  padding: "8px",
-                  borderRadius: "6px",
-                  textAlign: "center",
-                  border: "1px solid #ccc",
-                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                  backgroundColor: "#fff",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                }}
-              />
-            </td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
-              <input
-                type="text"
-                value={crew}
-                onChange={(e) => handleCrewChange(serial, e.target.value)}
-                style={{
-                  width: "80%",
-                  padding: "8px",
-                  borderRadius: "6px",
-                  textAlign: "center",
-                  border: "1px solid #ccc",
-                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                  backgroundColor: "#fff",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                }}
-              />
-            </td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed}</td>
-          </tr>
+            <thead>
+              <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
+                <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Squawk</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Crew</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tableRows.map(({ serial, reg, takeoff, landed, squawk, crew, isNew }, rowIndex) => (
+                <tr
+                  key={serial}
+                  style={{
+                    backgroundColor: serial % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
+                  }}
+                >
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{serial}</td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    {isNew ? (
+                      <input
+                        type="text"
+                        value={reg}
+                        onChange={(e) =>
+                          setDetailedFlightLog((prevLog) =>
+                            prevLog.map((entry) =>
+                              entry.serial === serial ? { ...entry, reg: e.target.value } : entry
+                            )
+                          )
+                        }
+                        style={{
+                          width: "80%",
+                          padding: "8px",
+                          borderRadius: "6px",
+                          textAlign: "center",
+                          border: "1px solid #ccc",
+                          backgroundColor: "#fff",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          color: "#333",
+                        }}
+                      />
+                    ) : (
+                      reg
+                    )}
+                  </td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    {isNew ? (
+                      <input
+                        type="text"
+                        value={takeoff}
+                        onChange={(e) =>
+                          setDetailedFlightLog((prevLog) =>
+                            prevLog.map((entry) =>
+                              entry.serial === serial ? { ...entry, takeoff: e.target.value } : entry
+                            )
+                          )
+                        }
+                        style={{
+                          width: "80%",
+                          padding: "8px",
+                          borderRadius: "6px",
+                          textAlign: "center",
+                          border: "1px solid #ccc",
+                          backgroundColor: "#fff",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          color: "#333",
+                        }}
+                      />
+                    ) : (
+                      takeoff
+                    )}
+                  </td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    <input
+                      type="text"
+                      value={squawk}
+                      maxLength={4}
+                      onChange={(e) =>
+                        setDetailedFlightLog((prevLog) =>
+                          prevLog.map((entry) =>
+                            entry.serial === serial ? { ...entry, squawk: e.target.value } : entry
+                          )
+                        )
+                      }
+                      style={{
+                        width: "80%",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        textAlign: "center",
+                        border: "1px solid #ccc",
+                        backgroundColor: "#fff",
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: "#333",
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    <input
+                      type="text"
+                      value={crew}
+                      onChange={(e) =>
+                        setDetailedFlightLog((prevLog) =>
+                          prevLog.map((entry) =>
+                            entry.serial === serial ? { ...entry, crew: e.target.value } : entry
+                          )
+                        )
+                      }
+                      style={{
+                        width: "80%",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        textAlign: "center",
+                        border: "1px solid #ccc",
+                        backgroundColor: "#fff",
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: "#333",
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    {isNew ? (
+                      <input
+                        type="text"
+                        value={landed}
+                        onChange={(e) =>
+                          setDetailedFlightLog((prevLog) =>
+                            prevLog.map((entry) =>
+                              entry.serial === serial ? { ...entry, landed: e.target.value } : entry
+                            )
+                          )
+                        }
+                        style={{
+                          width: "80%",
+                          padding: "8px",
+                          borderRadius: "6px",
+                          textAlign: "center",
+                          border: "1px solid #ccc",
+                          backgroundColor: "#fff",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          color: "#333",
+                        }}
+                      />
+                    ) : (
+                      landed
+                    )}
+                  </td>
+<td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+  <div
+    style={{
+      display: "flex", // Flexbox használata a gombok sorba rendezéséhez
+      justifyContent: "center", // Középre igazítás vízszintesen
+      gap: "5px", // Távolság a gombok között
+    }}
+  >
+    <button
+      onClick={() => handleAddRow(tableIndex, rowIndex)}
+      style={{
+        padding: "5px 10px",
+        backgroundColor: "green",
+        color: "white",
+        borderRadius: "4px",
+        border: "none",
+        cursor: "pointer",
+      }}
+    >
+      +
+    </button>
+    <button
+      onClick={() => setDeleteRowIndex({ tableIndex, rowIndex })}
+      style={{
+        padding: "5px 10px",
+        backgroundColor: "red",
+        color: "white",
+        borderRadius: "4px",
+        border: "none",
+        cursor: "pointer",
+      }}
+    >
+      🗑
+    </button>
+  </div>
+</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ))}
-      </tbody>
-    </table>
-  ));
-})()}
-      </Section>
+
+        {deleteRowIndex && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: "black",
+                padding: "20px",
+                borderRadius: "8px",
+                textAlign: "center",
+              }}
+            >
+              <p style={{ fontSize: "16px", marginBottom: "20px" }}>
+                Are you fully sure to delete the row???
+              </p>
+              <button
+                onClick={handleDeleteRow}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "green",
+                  color: "white",
+                  borderRadius: "4px",
+                  border: "none",
+                  cursor: "pointer",
+                  marginRight: "10px",
+                }}
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setDeleteRowIndex(null)}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "red",
+                  color: "white",
+                  borderRadius: "4px",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  })()}
+</Section>
 
 	  
 	  
