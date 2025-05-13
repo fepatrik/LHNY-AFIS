@@ -19,6 +19,8 @@ const AfisProgram = () => {
 const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
 const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
 const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
+const [trainingBoxDetails, setTrainingBoxDetails] = useState<{ [reg: string]: { taskHeight: string } }>({});
+
 
   const [showTable, setShowTable] = useState(true);
   const [flightLog, setFlightLog] = useState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>([]);
@@ -30,6 +32,16 @@ const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 1
     squawk: string;
     crew: string;
   }[]>([]);
+
+const moveFirstToLast = () => {
+  setVisualCircuit((prev) => {
+    if (prev.length === 0) return prev; // Ha üres, ne csináljon semmit
+    const updated = [...prev];
+    const first = updated.shift(); // Az első elem eltávolítása
+    if (first) updated.push(first); // Az elsőt a lista végére helyezzük
+    return updated;
+  });
+};
 
 const handleSquawkChange = (serial: number, newSquawk: string) => {
   setDetailedFlightLog((prevLog) =>
@@ -186,19 +198,18 @@ const moveBackToTaxiing = (reg: string) => {
 };
 
 const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
-    setHoldingPoint((prev) => prev.filter((r) => r !== reg));
-    setVisualCircuit((prev) => [...prev, reg]);
-    const takeoffTime = getCurrentTime();
-    setTimestamps((prev) => ({
-      ...prev,
-      [reg]: {
-        ...prev[reg],
-        takeoff: takeoffTime,
-      },
-    }));
-    // Add to flight log
-    addFlightLog(reg, takeoffTime, "", squawk, crew);
-  };
+  setHoldingPoint((prev) => prev.filter((r) => r !== reg));
+  setVisualCircuit((prev) => [reg, ...prev]); // A gépet a lista elejére helyezzük
+  const takeoffTime = getCurrentTime();
+  setTimestamps((prev) => ({
+    ...prev,
+    [reg]: {
+      ...prev[reg],
+      takeoff: takeoffTime,
+    },
+  }));
+  addFlightLog(reg, takeoffTime, "", squawk, crew);
+};
 
 const moveToTaxiingFromLocalIR = (reg: string) => {
   setLocalIR(localIR.filter((r) => r !== reg));
@@ -492,15 +503,38 @@ const renderAircraft = (
             </div>
           )}
 
-          {trainingBox[reg] && (
-            <div
-              style={{ fontSize: `${20 * scale}px`, color: "#ccc", marginBottom: `${10 * scale}px`, cursor: "pointer" }}
-              onClick={() => openModal(reg)}
-              title="Click to change training box"
-            >
-              {trainingBox[reg] === "Proceeding to VC" ? "PROCEEDING TO VC" : `TB ${trainingBox[reg]}`}
-            </div>
-          )}
+{trainingBox[reg] && (
+  <>
+    <div
+      style={{ fontSize: `${20 * scale}px`, color: "#ccc", marginBottom: `${10 * scale}px`, cursor: "pointer" }}
+      onClick={() => openModal(reg)}
+      title="Click to change training box"
+    >
+      {trainingBox[reg] === "Proceeding to VC" ? "PROCEEDING TO VC" : `TB ${trainingBox[reg]}`}
+    </div>
+
+    <input
+      type="text"
+      placeholder="Task, height"
+      value={trainingBoxDetails[reg]?.taskHeight || ""}
+      onChange={(e) =>
+        setTrainingBoxDetails((prev) => ({
+          ...prev,
+          [reg]: { ...prev[reg], taskHeight: e.target.value },
+        }))
+      }
+      style={{
+        padding: `${6 * scale}px`,
+        borderRadius: `${6 * scale}px`,
+        color: "black",
+        marginBottom: `${8 * scale}px`,
+        fontSize: `${14 * scale}px`,
+        width: "100%",
+      }}
+    />
+  </>
+)}
+
 
           {localIR.includes(reg) && (
             <>
@@ -705,10 +739,28 @@ const renderAircraft = (
   </div>
 </div>
 
-<Section title={`Visual Circuit (${visualCircuit.length})`}>
+<Section title="">
+  <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+    <h2 style={{ fontSize: "22px", fontWeight: "bold", margin: 0 }}>Visual Circuit ({visualCircuit.length})</h2>
+    <button
+      onClick={moveFirstToLast}
+      style={{
+        padding: "10px 20px",
+        fontSize: "16px",
+        backgroundColor: "#28a745",
+        color: "white",
+        borderRadius: "8px",
+        border: "none",
+        cursor: "pointer",
+        marginLeft: "150px", // Legalább 150px távolság a címtől
+      }}
+    >
+      Number 1 Landed
+    </button>
+  </div>
   {renderAircraft(visualCircuit, [
-    { label: "← Left", onClick: moveLeft }, // Balra mozgató nyíl
-    { label: "Right →", onClick: moveRight }, // Jobbra mozgató nyíl
+    { label: "← Left", onClick: moveLeft },
+    { label: "Right →", onClick: moveRight },
     { label: "Local IR", onClick: moveToLocalIR },
     { label: "TB", onClick: openModal },
     { label: "XC", onClick: moveToCrossCountry },
@@ -1146,7 +1198,7 @@ const renderAircraft = (
       <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Help</h3>
       
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Apron</strong> section, you'll find all Tréner airplanes. You can add foreign aircraft at the bottom, such as a police helicopter (R902). Click the <strong>APRON</strong> or <strong>HOLDING POINT</strong> button to move the aircraft to the corresponding group. Can't find the plane? Use the search bar. </p>
-<p style={{ fontSize: "16px", marginBottom: "16px" }}> When selecting <strong>VISUAL CIRCUIT</strong>, the aircraft is moved automatically, and its take-off time is recorded. In the Visual Circuit section, you can rearrange aircraft by moving them left or right to set the correct sequence. Click the <strong>DUAL</strong> button to switch the plane to <strong>SOLO</strong> mode, indicating it is a solo student. You can also click the "T/G" button to mark a full stop landing — it will then turn red and display "F/S"</p>
+<p style={{ fontSize: "16px", marginBottom: "16px" }}> When selecting <strong>VISUAL CIRCUIT</strong>, the aircraft is moved automatically, and its take-off time is recorded. In the Visual Circuit section, you can rearrange aircraft by moving them left or right to set the correct sequence. Click the <strong>DUAL</strong> button to switch the plane to <strong>SOLO</strong> mode, indicating it is a solo student. You can also click the "T/G" button to mark a full stop landing — it will then turn red and display "F/S". With the <strong>Number 1 landed</strong> button, you can set the first plane to be the last, indicating the correct sequence on the visual circuit after a touch and go.</p>
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> From the Visual Circuit, aircraft can proceed to <strong>Local IR</strong>, <strong>Training Box (TB)</strong>, or <strong>Cross Country (XC)</strong>. </p> <p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Local IR</strong> section, you can choose the task from the first drop-down menu. You can also add additional remarks—such as altitude, task details, or position—in the text input field. </p>
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> When selecting <strong>Training Box (TB)</strong>, a pop-up window will appear where you can select the appropriate TB. If the aircraft changes TB, simply click the displayed TB (e.g., "TB 6") to update it. There’s also an option to select <strong>TB Proceeding to Visual Circuit</strong>, indicating that the aircraft is returning. To actually move the plane back, click the <strong>JOIN VC</strong> button. Selecting “TB Proceeding to Visual Circuit” is optional—it’s just for situational awareness, not required for moving the aircraft. </p>
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Cross Country</strong> section, you can leave a remark indicating where the aircraft is headed. The checkbox allows you to mark whether the aircraft is on frequency. </p>
