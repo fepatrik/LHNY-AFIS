@@ -16,14 +16,17 @@ const AfisProgram = () => {
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
   const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
   const [timestamps, setTimestamps] = useState<{ [key: string]: { takeoff?: string; landed?: string } }>({});
-const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
-const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
-const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
-const [trainingBoxDetails, setTrainingBoxDetails] = useState<{ [reg: string]: { taskHeight: string } }>({});
-
-
+  const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
+  const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
+  const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
+  const [trainingBoxDetails, setTrainingBoxDetails] = useState<{ [reg: string]: { taskHeight: string } }>({});
   const [showTable, setShowTable] = useState(true);
   const [flightLog, setFlightLog] = useState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>([]);
+  const [aircraftStatuses, setAircraftStatuses] = useState<{ [key: string]: 'DUAL' | 'SOLO' }>({});
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
+  const [aircraftTGStatus, setAircraftTGStatus] = useState<{ [key: string]: 'T/G' | 'F/S' }>({});
+
+
   const [detailedFlightLog, setDetailedFlightLog] = useState<{
     serial: number;
     reg: string;
@@ -32,6 +35,44 @@ const [trainingBoxDetails, setTrainingBoxDetails] = useState<{ [reg: string]: { 
     squawk: string;
     crew: string;
   }[]>([]);
+
+  const [startNumber, setStartNumber] = useState(1); // State for starting number
+  const [isStartNumberModalOpen, setIsStartNumberModalOpen] = useState(false); // State for modal visibility
+
+  const handleStartNumberChange = (value: string) => {
+    const parsedValue = parseInt(value, 10);
+    if (!isNaN(parsedValue) && parsedValue > 0) {
+      setStartNumber(parsedValue);
+    }
+  };
+
+  const moveToTaxiingFromCrossCountry = (reg: string) => {
+  setCrossCountry((prev) => prev.filter((r) => r !== reg));
+  setTaxiing((prev) => [...prev, reg]);
+
+  const landedTime = getCurrentTime(); // Get the current time
+
+  setTimestamps((prev) => ({
+    ...prev,
+    [reg]: {
+      ...prev[reg],
+      landed: landedTime, // Save landing time
+    },
+  }));
+
+  // Update the detailed flight log with the landing time
+  updateLandingTime(reg, landedTime);
+
+  // Reset to default states
+  setAircraftStatuses((prev) => ({
+    ...prev,
+    [reg]: 'DUAL',
+  }));
+  setAircraftTGStatus((prev) => ({
+    ...prev,
+    [reg]: 'T/G',
+  }));
+};
 
 const moveFirstToLast = () => {
   setVisualCircuit((prev) => {
@@ -83,7 +124,6 @@ const updateLandingTime = (reg: string, landed: string) => {
   );
 };
 
-const [aircraftTGStatus, setAircraftTGStatus] = useState<{ [key: string]: 'T/G' | 'F/S' }>({});
 const toggleTGFSStatus = (reg: string) => {
   setAircraftTGStatus((prevStatuses) => {
     const currentStatus = prevStatuses[reg] || 'T/G';
@@ -95,10 +135,6 @@ const toggleTGFSStatus = (reg: string) => {
   });
 };
 
-
-// Add a new state to handle the aircraft statuses
-const [aircraftStatuses, setAircraftStatuses] = useState<{ [key: string]: 'DUAL' | 'SOLO' }>({});
-const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
 
 // Function to toggle the status of an aircraft
 const toggleAircraftStatus = (reg: string) => {
@@ -199,7 +235,7 @@ const moveBackToTaxiing = (reg: string) => {
 
 const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
   setHoldingPoint((prev) => prev.filter((r) => r !== reg));
-  setVisualCircuit((prev) => [reg, ...prev]); // A gépet a lista elejére helyezzük
+  setVisualCircuit((prev) => [...prev, reg]); // A gépet a lista végére helyezzük
   const takeoffTime = getCurrentTime();
   setTimestamps((prev) => ({
     ...prev,
@@ -427,6 +463,7 @@ const renderAircraft = (
           className="aircraftCard"
           style={{
             ...styles.aircraftCard,
+            maxWidth: `${boxWidth}px`, // Ensure maxWidth dynamically adjusts to boxWidth
             border: `3px solid ${borderColor}`,
             animation: pulsing ? "pulse 2s infinite" : undefined,
             opacity: isCrossCountry && !onFreq ? 0.5 : 1, // Reduce opacity if not "On Frequency"
@@ -528,7 +565,7 @@ const renderAircraft = (
         borderRadius: `${6 * scale}px`,
         color: "black",
         marginBottom: `${8 * scale}px`,
-        fontSize: `${14 * scale}px`,
+        fontSize: `${16 * scale}px`, // Increased font size
         width: "100%",
       }}
     />
@@ -541,7 +578,7 @@ const renderAircraft = (
               <select
                 value={localIRDetails[reg]?.procedure || "---"}
                 onChange={(e) => handleLocalIRChange(reg, 'procedure', e.target.value)}
-                style={{ marginBottom: `${8 * scale}px`, padding: `${6 * scale}px`, borderRadius: `${6 * scale}px` }}
+                style={{ marginBottom: `${8 * scale}px`, padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, fontSize: `${16 * scale}px` }}
               >
                 {["---", "NDB Traffic Pattern", "Holding NYR", "Holding PQ", "RNP Z", "RNP Y", "RNP Y Circle to Land", "RNP Z Circle to Land", "VOR APP", "VOR TEMPO", "NDB APP", "NDB TEMPO", "BOR APP", "NDB NCS"].map(option => (
                   <option key={option} value={option}>{option}</option>
@@ -552,7 +589,7 @@ const renderAircraft = (
                 value={localIRDetails[reg]?.height || ""}
                 onChange={(e) => handleLocalIRChange(reg, 'height', e.target.value)}
                 placeholder="Height"
-                style={{ padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, color: 'black', marginBottom: `${8 * scale}px` }}
+                style={{ padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, color: 'black', marginBottom: `${8 * scale}px`, fontSize: `${16 * scale}px` }}
               />
             </>
           )}
@@ -700,13 +737,14 @@ const renderAircraft = (
   {renderAircraft(
     crossCountry,
     [
-      { label: "Joining VC", onClick: moveToVisualFromCrossCountry },
-      { label: "Local IR", onClick: moveToLocalIRFromCrossCountry }, // Új gomb hozzáadása
+      { label: "Join VC", onClick: moveToVisualFromCrossCountry },
+      { label: "Approach", onClick: moveToLocalIRFromCrossCountry },
+      { label: "Vacated", onClick: moveToTaxiingFromCrossCountry }, // New button added
     ],
     false,
     (reg) => (
       <textarea
-        style={{ marginTop: "8px", padding: "6px", borderRadius: "8px", color: "black" }}
+        style={{ marginTop: `${8 * scale}px`, padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, color: "black", fontSize: `${16 * scale}px` }}
         placeholder="Proceeding to..."
       />
     ),
@@ -716,7 +754,7 @@ const renderAircraft = (
 
 <div style={{ display: "flex", width: "100%", marginBottom: "15px" }}>
   <div style={{ flex: 1, marginRight: "10px" }}>
-<Section title="Local IR">
+<Section title="Local IR and Approach">
   {renderAircraft(localIR, [
     { label: "Join VC", onClick: moveToVisualCircuitFromLocalIR },
     { label: "TB", onClick: openModal }, // Új gomb hozzáadása
@@ -728,14 +766,37 @@ const renderAircraft = (
 
   <div style={{ flex: 1, marginLeft: "10px" }}>
     <Section title="Training Box">
-{renderAircraft(
-  Object.keys(trainingBox),
-  [
-    { label: "Join VC", onClick: moveToVisualFromTrainingBox },
-    { label: "Local IR", onClick: moveToLocalIRFromTrainingBox }
-  ]
-)}
-    </Section>
+  {renderAircraft(
+    Object.keys(trainingBox),
+    [
+      { label: "Join VC", onClick: moveToVisualFromTrainingBox },
+      { label: "Local IR", onClick: moveToLocalIRFromTrainingBox },
+      { label: "Vacated", onClick: (reg: string) => {
+          setTrainingBox((prev) => {
+            const copy = { ...prev };
+            delete copy[reg]; // Remove the aircraft from the Training Box
+            return copy;
+          });
+
+          const landedTime = getCurrentTime(); // Get the current time
+
+          setTaxiing((prev) => [...prev, reg]); // Move the aircraft to Taxiing
+
+          setTimestamps((prev) => ({
+            ...prev,
+            [reg]: {
+              ...prev[reg],
+              landed: landedTime, // Save landing time
+            },
+          }));
+
+          // Update the detailed flight log with the landing time
+          updateLandingTime(reg, landedTime);
+        }
+      }
+    ]
+  )}
+</Section>
   </div>
 </div>
 
@@ -844,7 +905,7 @@ const renderAircraft = (
 </Section>
 
 <Section title="Flight Log">
-  <div style={{ marginBottom: "10px" }}>
+  <div style={{ marginBottom: "10px", display: "flex", gap: "10px" }}>
     <button
       onClick={() => setShowTable((prev) => !prev)}
       style={{
@@ -858,6 +919,20 @@ const renderAircraft = (
       }}
     >
       {showTable ? "Hide Table" : "Show Table"}
+    </button>
+    <button
+      onClick={() => setIsStartNumberModalOpen(true)}
+      style={{
+        padding: "10px 20px",
+        fontSize: "16px",
+        backgroundColor: "#28a745",
+        color: "white",
+        borderRadius: "8px",
+        border: "none",
+        cursor: "pointer",
+      }}
+    >
+      Start numbering from...
     </button>
   </div>
 
@@ -913,6 +988,7 @@ const renderAircraft = (
               fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
               color: "white",
               marginBottom: "20px",
+              fontSize: "20px", // Increased font size
             }}
           >
             <thead>
@@ -920,21 +996,21 @@ const renderAircraft = (
                 <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
                 <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
                 <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
-                <th style={{ padding: "10px", border: "1px solid white" }}>Squawk</th>
-                <th style={{ padding: "10px", border: "1px solid white" }}>Crew</th>
                 <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
                 <th style={{ padding: "10px", border: "1px solid white" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {tableRows.map(({ serial, reg, takeoff, landed, squawk, crew, isNew }, rowIndex) => (
+              {tableRows.map(({ serial, reg, takeoff, landed, isNew }, rowIndex) => (
                 <tr
                   key={serial}
                   style={{
                     backgroundColor: serial % 2 === 0 ? "rgba(0, 0, 0, 0.7)" : "rgba(50, 50, 50, 0.7)",
                   }}
                 >
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{serial}</td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    {startNumber + tableIndex * 33 + rowIndex} {/* Adjust numbering */}
+                  </td>
                   <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
                     {isNew ? (
                       <input
@@ -990,55 +1066,6 @@ const renderAircraft = (
                     ) : (
                       takeoff
                     )}
-                  </td>
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
-                    <input
-                      type="text"
-                      value={squawk}
-                      maxLength={4}
-                      onChange={(e) =>
-                        setDetailedFlightLog((prevLog) =>
-                          prevLog.map((entry) =>
-                            entry.serial === serial ? { ...entry, squawk: e.target.value } : entry
-                          )
-                        )
-                      }
-                      style={{
-                        width: "80%",
-                        padding: "8px",
-                        borderRadius: "6px",
-                        textAlign: "center",
-                        border: "1px solid #ccc",
-                        backgroundColor: "#fff",
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        color: "#333",
-                      }}
-                    />
-                  </td>
-                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
-                    <input
-                      type="text"
-                      value={crew}
-                      onChange={(e) =>
-                        setDetailedFlightLog((prevLog) =>
-                          prevLog.map((entry) =>
-                            entry.serial === serial ? { ...entry, crew: e.target.value } : entry
-                          )
-                        )
-                      }
-                      style={{
-                        width: "80%",
-                        padding: "8px",
-                        borderRadius: "6px",
-                        textAlign: "center",
-                        border: "1px solid #ccc",
-                        backgroundColor: "#fff",
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        color: "#333",
-                      }}
-                    />
                   </td>
                   <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
                     {isNew ? (
@@ -1168,8 +1195,145 @@ const renderAircraft = (
       </>
     );
   })()}
+
+  {isStartNumberModalOpen && (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 1000,
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          setIsStartNumberModalOpen(false); // Close the modal on Enter
+        } else if (e.key === "Escape") {
+          setIsStartNumberModalOpen(false); // Close the modal on Escape
+        }
+      }}
+      tabIndex={-1} // Make the div focusable for key events
+    >
+      <div
+        style={{
+          backgroundColor: "black",
+          padding: "20px",
+          borderRadius: "8px",
+          textAlign: "center",
+          color: "white",
+        }}
+      >
+        <h3 style={{ marginBottom: "10px" }}>Set Starting Number</h3>
+        <input
+          type="number"
+          min="1"
+          value={startNumber}
+          onChange={(e) => handleStartNumberChange(e.target.value)}
+          ref={(input) => {
+            if (input && !input.dataset.initialized) {
+              input.focus(); // Automatically focus the input
+              input.select(); // Automatically select the entire input value
+              input.dataset.initialized = "true"; // Mark as initialized to prevent re-selection
+            }
+          }}
+          style={{
+            padding: "10px",
+            borderRadius: "4px",
+            fontSize: "16px",
+            width: "100px",
+            textAlign: "center",
+          }}
+          inputMode="numeric" // Ensures numeric keyboard on touch devices
+        />
+        <div style={{ marginTop: "10px", display: "flex", gap: "10px", justifyContent: "center" }}>
+          <button
+            onClick={() => setIsStartNumberModalOpen(false)}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#28a745",
+              color: "white",
+              borderRadius: "4px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Confirm
+          </button>
+          <button
+            onClick={() => setIsStartNumberModalOpen(false)}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#dc3545",
+              color: "white",
+              borderRadius: "4px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
 </Section>
 
+<Section title="AFIS Log">
+  <table
+    style={{
+      width: "60%",
+      marginLeft: "0",
+      borderCollapse: "collapse",
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      color: "white",
+      marginBottom: "20px",
+      fontSize: "18px", // Font size for the table
+    }}
+  >
+    <thead>
+      <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
+        <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
+        <th style={{ padding: "10px", border: "1px solid white" }}>First Takeoff</th>
+        <th style={{ padding: "10px", border: "1px solid white" }}>Last Landing</th>
+      </tr>
+    </thead>
+    <tbody>
+      {Object.entries(
+        detailedFlightLog.reduce((acc, { reg, takeoff, landed }) => {
+          if (!acc[reg]) {
+            acc[reg] = { takeoff, landed };
+          } else {
+            if (takeoff && (!acc[reg].takeoff || takeoff < acc[reg].takeoff)) {
+              acc[reg].takeoff = takeoff;
+            }
+            if (landed && (!acc[reg].landed || landed > acc[reg].landed)) {
+              acc[reg].landed = landed;
+            }
+          }
+          return acc;
+        }, {} as { [reg: string]: { takeoff: string; landed: string } })
+      )
+        .sort(([, a], [, b]) => (a.takeoff || "").localeCompare(b.takeoff || ""))
+        .map(([reg, { takeoff, landed }]) => (
+          <tr
+            key={reg}
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+            }}
+          >
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff || "---"}</td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed || "---"}</td>
+          </tr>
+        ))}
+    </tbody>
+  </table>
+</Section>
 	  
 	  
 	  
@@ -1269,10 +1433,24 @@ const renderAircraft = (
 };
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", borderRadius: "12px", padding: "15px", marginBottom: "15px", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: "white" }}>
+  <div
+    style={{
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      borderRadius: "12px",
+      padding: "15px",
+      marginBottom: "15px",
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      color: "white",
+      minHeight: "330px", // Ensure the section is at least 500px high EZAGECI
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
     <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px" }}>{title}</h2>
-    {children}
+    <div style={{ flex: 1 }}>{children}</div> {/* Ensure content fills available space */}
   </div>
 );
+
+
 
 export default AfisProgram;
