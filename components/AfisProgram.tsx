@@ -904,7 +904,7 @@ const renderAircraft = (
   </div>
 </Section>
 
-<Section title="Flight Log">
+<Section title="Flight Log" noMinHeight>
   <div style={{ marginBottom: "10px", display: "flex", gap: "10px" }}>
     <button
       onClick={() => setShowTable((prev) => !prev)}
@@ -1283,7 +1283,7 @@ const renderAircraft = (
   )}
 </Section>
 
-<Section title="AFIS Log">
+<Section title="AFIS Log" noMinHeight>
   <table
     style={{
       width: "60%",
@@ -1432,7 +1432,7 @@ const renderAircraft = (
   );
 };
 
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+const Section: React.FC<{ title: string; children: React.ReactNode; noMinHeight?: boolean }> = ({ title, children, noMinHeight }) => (
   <div
     style={{
       backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -1441,16 +1441,14 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
       marginBottom: "15px",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       color: "white",
-      minHeight: "330px", // Ensure the section is at least 500px high EZAGECI
+      minHeight: noMinHeight ? undefined : "330px", // Conditionally apply minHeight
       display: "flex",
       flexDirection: "column",
     }}
   >
     <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px" }}>{title}</h2>
-    <div style={{ flex: 1 }}>{children}</div> {/* Ensure content fills available space */}
+    <div style={{ flex: 1 }}>{children}</div>
   </div>
 );
-
-
 
 export default AfisProgram;
