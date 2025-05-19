@@ -25,7 +25,39 @@ const AfisProgram = () => {
   const [aircraftStatuses, setAircraftStatuses] = useState<{ [key: string]: 'DUAL' | 'SOLO' }>({});
   const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
   const [aircraftTGStatus, setAircraftTGStatus] = useState<{ [key: string]: 'T/G' | 'F/S' }>({});
+const [isCrewSquawkModalOpen, setIsCrewSquawkModalOpen] = useState(false);
+const [modalReg, setModalReg] = useState<string>(""); // Registration for the modal
+const [modalCrew, setModalCrew] = useState<string>(""); // Crew input value
+const [modalSquawk, setModalSquawk] = useState<string>(""); // Squawk input value
 
+const openCrewSquawkModal = (reg: string) => {
+  setModalReg(reg);
+  setModalCrew(detailedFlightLog.find((entry) => entry.reg === reg)?.crew || "");
+  setModalSquawk(detailedFlightLog.find((entry) => entry.reg === reg)?.squawk || "");
+  setIsCrewSquawkModalOpen(true);
+};
+
+const closeCrewSquawkModal = () => {
+  setIsCrewSquawkModalOpen(false);
+  setModalReg("");
+  setModalCrew("");
+  setModalSquawk("");
+};
+
+const saveCrewSquawk = () => {
+  setDetailedFlightLog((prevLog) =>
+    prevLog.map((entry) =>
+      entry.reg === modalReg
+        ? {
+            ...entry,
+            crew: entry.crew || modalCrew, // Only update if crew is empty
+            squawk: entry.squawk || modalSquawk, // Only update if squawk is empty
+          }
+        : entry
+    )
+  );
+  closeCrewSquawkModal();
+};
 
   const [detailedFlightLog, setDetailedFlightLog] = useState<{
     serial: number;
@@ -34,6 +66,7 @@ const AfisProgram = () => {
     landed: string | "";
     squawk: string;
     crew: string;
+    soloAtLanding?: boolean; // Új mező: SOLO volt-e a leszálláskor
   }[]>([]);
 
   const [startNumber, setStartNumber] = useState(1); // State for starting number
@@ -118,7 +151,7 @@ const updateLandingTime = (reg: string, landed: string) => {
   setDetailedFlightLog((prevLog) =>
     prevLog.map((entry) =>
       entry.reg === reg && !entry.landed // Csak ha még nincs landolási idő
-        ? { ...entry, landed } // Frissítjük az adatot
+        ? { ...entry, landed, soloAtLanding: aircraftStatuses[reg] === 'SOLO' } // SOLO állapot mentése
         : entry // Egyébként érintetlenül hagyjuk
     )
   );
@@ -488,7 +521,9 @@ const renderAircraft = (
   fontSize: `${20 * scale}px`,
   flex: 1,
   textAlign: "center",
-}}>
+  cursor: "default", // Change cursor to default
+}}
+>
   {regs === visualCircuit ? `${index + 1}. ` : ""}{reg}
 </div>
 
@@ -840,7 +875,7 @@ const renderAircraft = (
         cursor: "pointer",
       }}
     >
-      Number 1 Landed
+      Move Number 1 to Last
     </button>
   </div>
   {renderAircraft(visualCircuit, [
@@ -1006,26 +1041,28 @@ const renderAircraft = (
           <table
             key={tableIndex}
             style={{
-              width: "40%",
+              width: "60%",
               marginLeft: "0",
               borderCollapse: "collapse",
               fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
               color: "white",
               marginBottom: "20px",
-              fontSize: "20px", // Increased font size
+              fontSize: "20px",
             }}
           >
             <thead>
               <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
                 <th style={{ padding: "10px", border: "1px solid white" }}>#</th>
                 <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Squawk</th>
                 <th style={{ padding: "10px", border: "1px solid white" }}>Takeoff Time</th>
+                <th style={{ padding: "10px", border: "1px solid white" }}>Crew</th>
                 <th style={{ padding: "10px", border: "1px solid white" }}>Landing Time</th>
                 <th style={{ padding: "10px", border: "1px solid white" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {tableRows.map(({ serial, reg, takeoff, landed, isNew }, rowIndex) => (
+              {tableRows.map(({ serial, reg, squawk, takeoff, crew, landed, isNew }, rowIndex) => (
                 <tr
                   key={serial}
                   style={{
@@ -1033,7 +1070,7 @@ const renderAircraft = (
                   }}
                 >
                   <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
-                    {startNumber + tableIndex * 33 + rowIndex} {/* Adjust numbering */}
+                    {startNumber + tableIndex * 33 + rowIndex}
                   </td>
                   <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
                     {isNew ? (
@@ -1060,8 +1097,35 @@ const renderAircraft = (
                         }}
                       />
                     ) : (
-                      reg
+                      <>
+                        {reg}
+                        {typeof serial !== "undefined" && detailedFlightLog.find(e => e.serial === serial)?.soloAtLanding ? " (SOLO)" : ""}
+                      </>
                     )}
+                  </td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    <input
+                      type="text"
+                      value={squawk || ""}
+                      onChange={(e) =>
+                        setDetailedFlightLog((prevLog) =>
+                          prevLog.map((entry) =>
+                            entry.serial === serial ? { ...entry, squawk: e.target.value } : entry
+                          )
+                        )
+                      }
+                      style={{
+                        width: "80%",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        textAlign: "center",
+                        border: "1px solid #ccc",
+                        backgroundColor: "#fff",
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: "#333",
+                      }}
+                    />
                   </td>
                   <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
                     {isNew ? (
@@ -1092,6 +1156,30 @@ const renderAircraft = (
                     )}
                   </td>
                   <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    <input
+                      type="text"
+                      value={crew || ""}
+                      onChange={(e) =>
+                        setDetailedFlightLog((prevLog) =>
+                          prevLog.map((entry) =>
+                            entry.serial === serial ? { ...entry, crew: e.target.value } : entry
+                          )
+                        )
+                      }
+                      style={{
+                        width: "80%",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        textAlign: "center",
+                        border: "1px solid #ccc",
+                        backgroundColor: "#fff",
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: "#333",
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
                     {isNew ? (
                       <input
                         type="text"
@@ -1119,48 +1207,47 @@ const renderAircraft = (
                       landed
                     )}
                   </td>
-<td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
-  <div
-    style={{
-      display: "flex", // Flexbox használata a gombok sorba rendezéséhez
-      justifyContent: "center", // Középre igazítás vízszintesen
-      gap: "5px", // Távolság a gombok között
-    }}
-  >
-    <button
-      onClick={() => handleAddRow(tableIndex, rowIndex)}
-      style={{
-        padding: "5px 10px",
-        backgroundColor: "green",
-        color: "white",
-        borderRadius: "4px",
-        border: "none",
-        cursor: "pointer",
-      }}
-    >
-      +
-    </button>
-    <button
-      onClick={() => setDeleteRowIndex({ tableIndex, rowIndex })}
-      style={{
-        padding: "5px 10px",
-        backgroundColor: "red",
-        color: "white",
-        borderRadius: "4px",
-        border: "none",
-        cursor: "pointer",
-      }}
-    >
-      🗑
-    </button>
-  </div>
-</td>
+                  <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        gap: "5px",
+                      }}
+                    >
+                      <button
+                        onClick={() => handleAddRow(tableIndex, rowIndex)}
+                        style={{
+                          padding: "5px 10px",
+                          backgroundColor: "green",
+                          color: "white",
+                          borderRadius: "4px",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => setDeleteRowIndex({ tableIndex, rowIndex })}
+                        style={{
+                          padding: "5px 10px",
+                          backgroundColor: "red",
+                          color: "white",
+                          borderRadius: "4px",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         ))}
-
         {deleteRowIndex && (
           <div
             style={{
@@ -1183,6 +1270,10 @@ const renderAircraft = (
                 padding: "20px",
                 borderRadius: "8px",
                 textAlign: "center",
+                maxWidth: "60vw", // Max szélesség 75%
+                width: "100%",
+                margin: "0 auto",
+                boxSizing: "border-box",
               }}
             >
               <p style={{ fontSize: "16px", marginBottom: "20px" }}>
@@ -1254,6 +1345,10 @@ const renderAircraft = (
           borderRadius: "8px",
           textAlign: "center",
           color: "white",
+          maxWidth: "75vw", // Max szélesség 75%
+          width: "100%",
+          margin: "0 auto",
+          boxSizing: "border-box",
         }}
       >
         <h3 style={{ marginBottom: "10px" }}>Set Starting Number</h3>
@@ -1380,22 +1475,38 @@ const renderAircraft = (
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     backdropFilter: "blur(8px)", // Elmosás hozzáadva
     WebkitBackdropFilter: "blur(8px)", // Safari támogatás
-  }}>
+  }}
+  tabIndex={-1}
+  onKeyDown={(e) => {
+    if (e.key === "Escape") setIsHelpModalOpen(false);
+  }}
+>
     <div style={{
       backgroundColor: "#222",
       padding: "20px",
       borderRadius: "12px",
       textAlign: "center",
       minWidth: "320px",
-      color: "white"
+      color: "white",
+      maxWidth: "75vw", // Max szélesség 75%
+      width: "100%",
+      margin: "0 auto",
+      boxSizing: "border-box",
     }}>
       <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Help</h3>
       
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Apron</strong> section, you'll find all Tréner airplanes. You can add foreign aircraft at the bottom, such as a police helicopter (R902). Click the <strong>APRON</strong> or <strong>HOLDING POINT</strong> button to move the aircraft to the corresponding group. Can't find the plane? Use the search bar. </p>
-<p style={{ fontSize: "16px", marginBottom: "16px" }}> When selecting <strong>VISUAL CIRCUIT</strong>, the aircraft is moved automatically, and its take-off time is recorded. In the Visual Circuit section, you can rearrange aircraft by moving them left or right to set the correct sequence. Click the <strong>DUAL</strong> button to switch the plane to <strong>SOLO</strong> mode, indicating it is a solo student. You can also click the "T/G" button to mark a full stop landing — it will then turn red and display "F/S". With the <strong>Number 1 landed</strong> button, you can set the first plane to be the last, indicating the correct sequence on the visual circuit after a touch and go.</p>
+<p style={{ fontSize: "16px", marginBottom: "16px" }}> When selecting <strong>VISUAL CIRCUIT</strong>, the aircraft is moved automatically, and its take-off time is recorded. In the Visual Circuit section, you can rearrange aircraft by moving them left or right to set the correct sequence. Click the <strong>DUAL</strong> button to switch the plane to <strong>SOLO</strong> mode, indicating it is a solo student. You can also click the "T/G" button to mark a full stop landing — it will then turn red and display "F/S". With the <strong>Move Number 1 to Last</strong> button, you can set the first plane to be the last, indicating the correct sequence on the visual circuit after a touch and go.</p>
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> From the Visual Circuit, aircraft can proceed to <strong>Local IR</strong>, <strong>Training Box (TB)</strong>, or <strong>Cross Country (XC)</strong>. </p> <p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Local IR</strong> section, you can choose the task from the first drop-down menu. You can also add additional remarks—such as altitude, task details, or position—in the text input field. </p>
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> When selecting <strong>Training Box (TB)</strong>, a pop-up window will appear where you can select the appropriate TB. If the aircraft changes TB, simply click the displayed TB (e.g., "TB 6") to update it. There’s also an option to select <strong>TB Proceeding to Visual Circuit</strong>, indicating that the aircraft is returning. To actually move the plane back, click the <strong>JOIN VC</strong> button. Selecting “TB Proceeding to Visual Circuit” is optional—it’s just for situational awareness, not required for moving the aircraft. </p>
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Cross Country</strong> section, you can leave a remark indicating where the aircraft is headed. The checkbox allows you to mark whether the aircraft is on frequency. </p>
+<p style={{ fontSize: "16px", marginBottom: "16px" }}> It is recommended that once an aircraft calls you, you move it from the Apron section to the Taxiing section. This way, it will be easier to find when the aircraft reaches the holding point and is ready for departure, saving you time and avoiding unnecessary searching. </p>
+<p style={{ fontSize: "16px", marginBottom: "16px" }}> At the bottom of the page, you’ll find the Flight Log and AFIS Log sections.
+The Flight Log records all takeoffs and landings, just like a traditional paper log. If a student pilot was flying solo, the word “Solo” will appear next to the aircraft registration after landing.
+The AFIS Log summarizes the day’s operations by listing the first takeoff and last landing time for each aircraft used during the day. </p>
+<p style={{ fontSize: "16px", marginBottom: "16px" }}> Clicking the green plus button adds a new row above, while clicking the red trash icon deletes the current row.
+
+ </p>
       <button
         onClick={() => setIsHelpModalOpen(false)}
         style={{
@@ -1437,7 +1548,11 @@ const renderAircraft = (
             borderRadius: "12px",
             textAlign: "center",
             minWidth: "320px",
-            color: "white"
+            color: "white",
+            maxWidth: "75vw", // Max szélesség 75%
+            width: "100%",
+            margin: "0 auto",
+            boxSizing: "border-box",
           }}>
             <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Choose TB for {selectedAircraft}:</h3>
             {["1", "2", "3", "4", "5", "6","7", "5-6","1-2","2-3","1-2-3", "100","TO VC","TO DOWNWIND","TO BASE","TO O.T.", "TO FINAL","TO CROSSWIND"].map((box) => (
@@ -1460,6 +1575,96 @@ const renderAircraft = (
           </div>
         </div>
       )}
+	  
+	  {isCrewSquawkModalOpen && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100vw",
+      height: "100vh",
+      backgroundColor: "rgba(0, 0, 0, 0.6)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1000,
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
+    }}
+  >
+    <div
+      style={{
+        backgroundColor: "#222",
+        padding: "20px",
+        borderRadius: "12px",
+        textAlign: "center",
+        minWidth: "320px",
+        color: "white",
+        maxWidth: "75vw",
+        width: "100%",
+        margin: "0 auto",
+        boxSizing: "border-box",
+      }}
+    >
+      <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Crew és Squawk</h3>
+      <input
+        type="text"
+        value={modalCrew}
+        onChange={(e) => setModalCrew(e.target.value)}
+        placeholder="Crew"
+        style={{
+          padding: "10px",
+          borderRadius: "4px",
+          fontSize: "16px",
+          width: "80%",
+          marginBottom: "10px",
+        }}
+      />
+      <input
+        type="text"
+        value={modalSquawk}
+        onChange={(e) => setModalSquawk(e.target.value)}
+        placeholder="Squawk"
+        style={{
+          padding: "10px",
+          borderRadius: "4px",
+          fontSize: "16px",
+          width: "80%",
+          marginBottom: "10px",
+        }}
+      />
+      <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+        <button
+          onClick={saveCrewSquawk}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#28a745",
+            color: "white",
+            borderRadius: "4px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Save
+        </button>
+        <button
+          onClick={closeCrewSquawkModal}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            borderRadius: "4px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </>
   );
 };
@@ -1484,3 +1689,4 @@ const Section: React.FC<{ title: string; children: React.ReactNode; noMinHeight?
 );
 
 export default AfisProgram;
+
