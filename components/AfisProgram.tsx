@@ -158,8 +158,10 @@ const styles = {
     marginBottom: `${2 * scale}px`,
   } as React.CSSProperties,
   aircraftCard: {
-    flexBasis: `${18 * scale}%`,
-      maxWidth: `${boxWidth}px`, // Dinamikus szélesség
+    flexBasis: "unset", // Eltávolítjuk a százalékos flexBasis-t
+    width: `${boxWidth}px`, // Fix szélesség minden kártyára
+    maxWidth: `${boxWidth}px`,
+    minWidth: `${boxWidth}px`,
     minHeight: `${20 * scale}px`,
     border: `${3 * scale}px solid white`,
     borderRadius: `${15 * scale}px`,
@@ -263,6 +265,16 @@ const moveToTaxiingFromLocalIR = (reg: string) => {
 
   // Frissítsük a detailedFlightLog-ot a leszállási idővel
   updateLandingTime(reg, landedTime);
+
+  // Reset to default states
+  setAircraftStatuses((prev) => ({
+    ...prev,
+    [reg]: 'DUAL',
+  }));
+  setAircraftTGStatus((prev) => ({
+    ...prev,
+    [reg]: 'T/G',
+  }));
 };
 
 
@@ -425,7 +437,7 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
     const idx = visualCircuit.indexOf(reg);
     if (idx < visualCircuit.length - 1) {
       const newVC = [...visualCircuit];
-      [newVC[idx], newVC[idx + 1]] = [newVC[idx + 1], newVC[idx]];
+      [newVC[idx + 1], newVC[idx]] = [newVC[idx], newVC[idx + 1]];
       setVisualCircuit(newVC);
     }
   };
@@ -566,7 +578,10 @@ const renderAircraft = (
         color: "black",
         marginBottom: `${8 * scale}px`,
         fontSize: `${16 * scale}px`, // Increased font size
-        width: "100%",
+        width: `calc(100% - ${12 * scale}px)`, // Mindkét oldalra 6px margó
+        marginLeft: `${6 * scale}px`,
+        marginRight: `${6 * scale}px`,
+        boxSizing: "border-box",
       }}
     />
   </>
@@ -792,6 +807,16 @@ const renderAircraft = (
 
           // Update the detailed flight log with the landing time
           updateLandingTime(reg, landedTime);
+
+          // Reset to default states
+          setAircraftStatuses((prev) => ({
+            ...prev,
+            [reg]: 'DUAL',
+          }));
+          setAircraftTGStatus((prev) => ({
+            ...prev,
+            [reg]: 'T/G',
+          }));
         }
       }
     ]
@@ -801,7 +826,7 @@ const renderAircraft = (
 </div>
 
 <Section title="">
-  <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+  <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", justifyContent: "space-between", marginTop: 0 }}>
     <h2 style={{ fontSize: "22px", fontWeight: "bold", margin: 0 }}>Visual Circuit ({visualCircuit.length})</h2>
     <button
       onClick={moveFirstToLast}
@@ -813,7 +838,6 @@ const renderAircraft = (
         borderRadius: "8px",
         border: "none",
         cursor: "pointer",
-        marginLeft: "150px", // Legalább 150px távolság a címtől
       }}
     >
       Number 1 Landed
@@ -1149,6 +1173,8 @@ const renderAircraft = (
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
+              backdropFilter: "blur(8px)", // Elmosás hozzáadva
+              WebkitBackdropFilter: "blur(8px)", // Safari támogatás
             }}
           >
             <div
@@ -1209,6 +1235,8 @@ const renderAircraft = (
         justifyContent: "center",
         alignItems: "center",
         zIndex: 1000,
+        backdropFilter: "blur(8px)", // Elmosás hozzáadva
+        WebkitBackdropFilter: "blur(8px)", // Safari támogatás
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
@@ -1349,7 +1377,9 @@ const renderAircraft = (
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1000,
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    backdropFilter: "blur(8px)", // Elmosás hozzáadva
+    WebkitBackdropFilter: "blur(8px)", // Safari támogatás
   }}>
     <div style={{
       backgroundColor: "#222",
@@ -1397,7 +1427,9 @@ const renderAircraft = (
           alignItems: "center",
           justifyContent: "center",
           zIndex: 1000,
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          backdropFilter: "blur(8px)", // Elmosás hozzáadva
+          WebkitBackdropFilter: "blur(8px)", // Safari támogatás
         }}>
           <div style={{
             backgroundColor: "#222",
@@ -1408,7 +1440,7 @@ const renderAircraft = (
             color: "white"
           }}>
             <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Choose TB for {selectedAircraft}:</h3>
-            {["1", "2", "3", "4", "5", "6","7", "5-6","1-2","2-3","1-2-3", "100","TO VC"].map((box) => (
+            {["1", "2", "3", "4", "5", "6","7", "5-6","1-2","2-3","1-2-3", "100","TO VC","TO DOWNWIND","TO BASE","TO O.T.", "TO FINAL","TO CROSSWIND"].map((box) => (
               <button
                 key={box}
                 onClick={() => handleTrainingBoxSelection(box)}
@@ -1446,7 +1478,7 @@ const Section: React.FC<{ title: string; children: React.ReactNode; noMinHeight?
       flexDirection: "column",
     }}
   >
-    <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px" }}>{title}</h2>
+    <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px", marginTop: 0 }}>{title}</h2>
     <div style={{ flex: 1 }}>{children}</div>
   </div>
 );
