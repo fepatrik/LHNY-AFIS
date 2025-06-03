@@ -727,7 +727,7 @@ const renderAircraft = (
 
 
 
-<Section title="LHNY AFIS - by Ludwig Schwarz Software Company">
+<Section title="LHNY AFIS - by Ludwig Schwarz">
     <h2>Size:</h2>
   <input
     type="range"
@@ -1495,7 +1495,10 @@ const renderAircraft = (
     }}>
       <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Help</h3>
       
-<p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Apron</strong> section, you'll find all Tréner airplanes. You can add foreign aircraft at the bottom, such as a police helicopter (R902). Click the <strong>APRON</strong> or <strong>HOLDING POINT</strong> button to move the aircraft to the corresponding group. Can't find the plane? Use the search bar. </p>
+<p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Apron</strong> section, you'll find all Tréner airplanes. You can add foreign aircraft at the bottom, such as a police helicopter (R902). Click the <strong>TAXI</strong> or <strong>HOLDING POINT</strong> button to move the aircraft to the corresponding group. Can't find the plane? Use the search bar. </p>
+
+<p style={{ fontSize: "16px", marginBottom: "16px" }}>You can also click <strong>Cross Country</strong>, but in that case, take-off and landing time will not be recorded and displayed in the flight log!</p>
+
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> When selecting <strong>VISUAL CIRCUIT</strong>, the aircraft is moved automatically, and its take-off time is recorded. In the Visual Circuit section, you can rearrange aircraft by moving them left or right to set the correct sequence. Click the <strong>DUAL</strong> button to switch the plane to <strong>SOLO</strong> mode, indicating it is a solo student. You can also click the "T/G" button to mark a full stop landing — it will then turn red and display "F/S". With the <strong>Move Number 1 to Last</strong> button, you can set the first plane to be the last, indicating the correct sequence on the visual circuit after a touch and go.</p>
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> From the Visual Circuit, aircraft can proceed to <strong>Local IR</strong>, <strong>Training Box (TB)</strong>, or <strong>Cross Country (XC)</strong>. </p> <p style={{ fontSize: "16px", marginBottom: "16px" }}> In the <strong>Local IR</strong> section, you can choose the task from the first drop-down menu. You can also add additional remarks—such as altitude, task details, or position—in the text input field. </p>
 <p style={{ fontSize: "16px", marginBottom: "16px" }}> When selecting <strong>Training Box (TB)</strong>, a pop-up window will appear where you can select the appropriate TB. If the aircraft changes TB, simply click the displayed TB (e.g., "TB 6") to update it. There’s also an option to select <strong>TB Proceeding to Visual Circuit</strong>, indicating that the aircraft is returning. To actually move the plane back, click the <strong>JOIN VC</strong> button. Selecting “TB Proceeding to Visual Circuit” is optional—it’s just for situational awareness, not required for moving the aircraft. </p>
