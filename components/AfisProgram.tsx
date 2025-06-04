@@ -2,6 +2,9 @@
 
 import React, { useState } from "react";
 
+// Move localIRDetails state definition to the top-level (outside the component) to persist between renders
+const localIRDetailsStore: { [key: string]: { procedure: string; height: string; clearance: string } } = {};
+
 const AfisProgram = () => {
   const [taxiing, setTaxiing] = useState<string[]>([]);
   const [holdingPoint, setHoldingPoint] = useState<string[]>([]);
@@ -11,7 +14,7 @@ const AfisProgram = () => {
   const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
   const [newReg, setNewReg] = useState<string>("");
   const [localIR, setLocalIR] = useState<string[]>([]);
-  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>({});
+  const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => ({ ...localIRDetailsStore }));
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedAircraft, setSelectedAircraft] = useState<string>("");
   const [crossCountryFrequency, setCrossCountryFrequency] = useState<{ [key: string]: boolean }>({});
@@ -25,39 +28,43 @@ const AfisProgram = () => {
   const [aircraftStatuses, setAircraftStatuses] = useState<{ [key: string]: 'DUAL' | 'SOLO' }>({});
   const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
   const [aircraftTGStatus, setAircraftTGStatus] = useState<{ [key: string]: 'T/G' | 'F/S' }>({});
-const [isCrewSquawkModalOpen, setIsCrewSquawkModalOpen] = useState(false);
-const [modalReg, setModalReg] = useState<string>(""); // Registration for the modal
-const [modalCrew, setModalCrew] = useState<string>(""); // Crew input value
-const [modalSquawk, setModalSquawk] = useState<string>(""); // Squawk input value
+  const [isCrewSquawkModalOpen, setIsCrewSquawkModalOpen] = useState(false);
+  const [modalReg, setModalReg] = useState<string>(""); // Registration for the modal
+  const [modalCrew, setModalCrew] = useState<string>(""); // Crew input value
+  const [modalSquawk, setModalSquawk] = useState<string>(""); // Squawk input value
+  const [timeOffset, setTimeOffset] = useState<number>(2); // Időzóna korrekció, alapból +2
+  const [isTakeoffModalOpen, setIsTakeoffModalOpen] = useState(false);
+  const [modalTakeoffReg, setModalTakeoffReg] = useState<string>("");
+  const [modalTakeoffValue, setModalTakeoffValue] = useState<string>("");
 
-const openCrewSquawkModal = (reg: string) => {
-  setModalReg(reg);
-  setModalCrew(detailedFlightLog.find((entry) => entry.reg === reg)?.crew || "");
-  setModalSquawk(detailedFlightLog.find((entry) => entry.reg === reg)?.squawk || "");
-  setIsCrewSquawkModalOpen(true);
-};
+  const openCrewSquawkModal = (reg: string) => {
+    setModalReg(reg);
+    setModalCrew(detailedFlightLog.find((entry) => entry.reg === reg)?.crew || "");
+    setModalSquawk(detailedFlightLog.find((entry) => entry.reg === reg)?.squawk || "");
+    setIsCrewSquawkModalOpen(true);
+  };
 
-const closeCrewSquawkModal = () => {
-  setIsCrewSquawkModalOpen(false);
-  setModalReg("");
-  setModalCrew("");
-  setModalSquawk("");
-};
+  const closeCrewSquawkModal = () => {
+    setIsCrewSquawkModalOpen(false);
+    setModalReg("");
+    setModalCrew("");
+    setModalSquawk("");
+  };
 
-const saveCrewSquawk = () => {
-  setDetailedFlightLog((prevLog) =>
-    prevLog.map((entry) =>
-      entry.reg === modalReg
-        ? {
-            ...entry,
-            crew: entry.crew || modalCrew, // Only update if crew is empty
-            squawk: entry.squawk || modalSquawk, // Only update if squawk is empty
-          }
-        : entry
-    )
-  );
-  closeCrewSquawkModal();
-};
+  const saveCrewSquawk = () => {
+    setDetailedFlightLog((prevLog) =>
+      prevLog.map((entry) =>
+        entry.reg === modalReg
+          ? {
+              ...entry,
+              crew: entry.crew || modalCrew, // Only update if crew is empty
+              squawk: entry.squawk || modalSquawk, // Only update if squawk is empty
+            }
+          : entry
+      )
+    );
+    closeCrewSquawkModal();
+  };
 
   const [detailedFlightLog, setDetailedFlightLog] = useState<{
     serial: number;
@@ -80,58 +87,58 @@ const saveCrewSquawk = () => {
   };
 
   const moveToTaxiingFromCrossCountry = (reg: string) => {
-  setCrossCountry((prev) => prev.filter((r) => r !== reg));
-  setTaxiing((prev) => [...prev, reg]);
+    setCrossCountry((prev) => prev.filter((r) => r !== reg));
+    setTaxiing((prev) => [...prev, reg]);
 
-  const landedTime = getCurrentTime(); // Get the current time
+    const landedTime = getCurrentTime(); // Get the current time
 
-  setTimestamps((prev) => ({
-    ...prev,
-    [reg]: {
-      ...prev[reg],
-      landed: landedTime, // Save landing time
-    },
-  }));
+    setTimestamps((prev) => ({
+      ...prev,
+      [reg]: {
+        ...prev[reg],
+        landed: landedTime, // Save landing time
+      },
+    }));
 
-  // Update the detailed flight log with the landing time
-  updateLandingTime(reg, landedTime);
+    // Update the detailed flight log with the landing time
+    updateLandingTime(reg, landedTime);
 
-  // Reset to default states
-  setAircraftStatuses((prev) => ({
-    ...prev,
-    [reg]: 'DUAL',
-  }));
-  setAircraftTGStatus((prev) => ({
-    ...prev,
-    [reg]: 'T/G',
-  }));
-};
+    // Reset to default states
+    setAircraftStatuses((prev) => ({
+      ...prev,
+      [reg]: 'DUAL',
+    }));
+    setAircraftTGStatus((prev) => ({
+      ...prev,
+      [reg]: 'T/G',
+    }));
+  };
 
-const moveFirstToLast = () => {
-  setVisualCircuit((prev) => {
-    if (prev.length === 0) return prev; // Ha üres, ne csináljon semmit
-    const updated = [...prev];
-    const first = updated.shift(); // Az első elem eltávolítása
-    if (first) updated.push(first); // Az elsőt a lista végére helyezzük
-    return updated;
-  });
-};
+  const moveFirstToLast = () => {
+    setVisualCircuit((prev) => {
+      if (prev.length === 0) return prev; // Ha üres, ne csináljon semmit
+      const updated = [...prev];
+      const first = updated.shift(); // Az első elem eltávolítása
+      if (first) updated.push(first); // Az elsőt a lista végére helyezzük
+      return updated;
+    });
+  };
 
-const handleSquawkChange = (serial: number, newSquawk: string) => {
-  setDetailedFlightLog((prevLog) =>
-    prevLog.map((entry) =>
-      entry.serial === serial ? { ...entry, squawk: newSquawk } : entry
-    )
-  );
-};
+  const handleSquawkChange = (serial: number, newSquawk: string) => {
+    setDetailedFlightLog((prevLog) =>
+      prevLog.map((entry) =>
+        entry.serial === serial ? { ...entry, squawk: newSquawk } : entry
+      )
+    );
+  };
 
-const handleCrewChange = (serial: number, newCrew: string) => {
-  setDetailedFlightLog((prevLog) =>
-    prevLog.map((entry) =>
-      entry.serial === serial ? { ...entry, crew: newCrew } : entry
-    )
-  );
-};
+  const handleCrewChange = (serial: number, newCrew: string) => {
+    setDetailedFlightLog((prevLog) =>
+      prevLog.map((entry) =>
+        entry.serial === serial ? { ...entry, crew: newCrew } : entry
+      )
+    );
+  };
 
   const addFlightLog = (reg: string, takeoff: string | "", landed: string | "", squawk: string, crew: string) => {
     setDetailedFlightLog((prevLog) => [
@@ -147,26 +154,26 @@ const handleCrewChange = (serial: number, newCrew: string) => {
     ]);
   };
   
-const updateLandingTime = (reg: string, landed: string) => {
-  setDetailedFlightLog((prevLog) =>
-    prevLog.map((entry) =>
-      entry.reg === reg && !entry.landed // Csak ha még nincs landolási idő
-        ? { ...entry, landed, soloAtLanding: aircraftStatuses[reg] === 'SOLO' } // SOLO állapot mentése
-        : entry // Egyébként érintetlenül hagyjuk
-    )
-  );
-};
+  const updateLandingTime = (reg: string, landed: string) => {
+    setDetailedFlightLog((prevLog) =>
+      prevLog.map((entry) =>
+        entry.reg === reg && !entry.landed // Csak ha még nincs landolási idő
+          ? { ...entry, landed, soloAtLanding: aircraftStatuses[reg] === 'SOLO' } // SOLO állapot mentése
+          : entry // Egyébként érintetlenül hagyjuk
+      )
+    );
+  };
 
-const toggleTGFSStatus = (reg: string) => {
-  setAircraftTGStatus((prevStatuses) => {
-    const currentStatus = prevStatuses[reg] || 'T/G';
-    const newStatus = currentStatus === 'T/G' ? 'F/S' : 'T/G';
-    return {
-      ...prevStatuses,
-      [reg]: newStatus,
-    };
-  });
-};
+  const toggleTGFSStatus = (reg: string) => {
+    setAircraftTGStatus((prevStatuses) => {
+      const currentStatus = prevStatuses[reg] || 'T/G';
+      const newStatus = currentStatus === 'T/G' ? 'F/S' : 'T/G';
+      return {
+        ...prevStatuses,
+        [reg]: newStatus,
+      };
+    });
+  };
 
 
 // Function to toggle the status of an aircraft
@@ -183,7 +190,8 @@ const toggleAircraftStatus = (reg: string) => {
 
 
 const styles = {
-  container: {
+  container:
+  {
     display: "flex",
     gap: `${15 * scale}px`,
     flexWrap: "wrap",
@@ -218,7 +226,17 @@ const styles = {
     return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-
+// Idő eltolás segédfüggvény
+const getOffsetTime = (time: string) => {
+  if (!time) return "";
+  // Feltételezzük, hogy a time formátuma HH:MM
+  const [h, m] = time.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return time;
+  let newHour = h + timeOffset;
+  if (newHour < 0) newHour += 24;
+  if (newHour > 23) newHour -= 24;
+  return `${newHour.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+};
 
 const moveToCrossCountryFromApron = (reg: string) => {
   setApron((prev) => prev.filter((r) => r !== reg)); // Eltávolítja a gépet az Apron állapotból
@@ -344,9 +362,7 @@ const resetSizes = () => {
   const moveToVisualCircuitFromLocalIR = (reg: string) => {
     setLocalIR(localIR.filter((r) => r !== reg));
     setVisualCircuit([...visualCircuit, reg]);
-    const updatedDetails = { ...localIRDetails };
-    delete updatedDetails[reg];
-    setLocalIRDetails(updatedDetails);
+    // Do NOT delete localIRDetails here
   };
 
 const addAircraftToApron = () => {
@@ -392,7 +408,10 @@ const moveToTrainingBox = (reg: string, box: string) => {
   const moveToLocalIR = (reg: string) => {
     setVisualCircuit(visualCircuit.filter((r) => r !== reg));
     setLocalIR([...localIR, reg]);
-    setLocalIRDetails({ ...localIRDetails, [reg]: { procedure: "---", height: "", clearance: "" } });
+    if (!localIRDetails[reg]) {
+      const updated = { ...localIRDetails, [reg]: { procedure: "---", height: "", clearance: "" } };
+      persistLocalIRDetails(updated);
+    }
   };
 
 const moveToCrossCountry = (reg: string) => {
@@ -412,10 +431,10 @@ const moveToCrossCountry = (reg: string) => {
 const moveToLocalIRFromCrossCountry = (reg: string) => {
   setCrossCountry((prev) => prev.filter((r) => r !== reg)); // Eltávolítja a Cross Country állapotból
   setLocalIR((prev) => [...prev, reg]); // Hozzáadja a Local IR állapothoz
-  setLocalIRDetails((prev) => ({
-    ...prev,
-    [reg]: { procedure: "---", height: "", clearance: "" }, // Alapértelmezett értékek a Local IR-hez
-  }));
+  if (!localIRDetails[reg]) {
+    const updated = { ...localIRDetails, [reg]: { procedure: "---", height: "", clearance: "" } };
+    persistLocalIRDetails(updated);
+  }
 };
 
   const moveToVisualFromTrainingBox = (reg: string) => {
@@ -432,14 +451,22 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
     setVisualCircuit([...visualCircuit, reg]);
   };
 
+  // Helper to persist localIRDetails to the store and state
+  const persistLocalIRDetails = (newDetails: { [key: string]: { procedure: string; height: string; clearance: string } }) => {
+    Object.assign(localIRDetailsStore, newDetails);
+    setLocalIRDetails({ ...localIRDetailsStore });
+  };
+
+  // Update handleLocalIRChange to use persistLocalIRDetails
   const handleLocalIRChange = (reg: string, field: 'procedure' | 'height' | 'clearance', value: string) => {
-    setLocalIRDetails(prev => ({
-      ...prev,
+    const updated = {
+      ...localIRDetails,
       [reg]: {
-        ...prev[reg],
+        ...localIRDetails[reg],
         [field]: value
       }
-    }));
+    };
+    persistLocalIRDetails(updated);
   };
 
   const openModal = (reg: string) => {
@@ -474,6 +501,45 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
       setVisualCircuit(newVC);
     }
   };
+
+// Add these functions before renderAircraft
+
+const openTakeoffModal = (reg: string) => {
+  setModalTakeoffReg(reg);
+  setModalTakeoffValue(timestamps[reg]?.takeoff || "");
+  setIsTakeoffModalOpen(true);
+};
+
+const closeTakeoffModal = () => {
+  setIsTakeoffModalOpen(false);
+  setModalTakeoffReg("");
+  setModalTakeoffValue("");
+};
+
+const saveTakeoffModal = () => {
+  if (!modalTakeoffReg) return;
+  setTimestamps((prev) => ({
+    ...prev,
+    [modalTakeoffReg]: {
+      ...prev[modalTakeoffReg],
+      takeoff: modalTakeoffValue,
+    },
+  }));
+  setDetailedFlightLog((prevLog) => {
+    const lastIdx = [...prevLog]
+      .map((entry, idx) => ({ ...entry, idx }))
+      .filter(entry => entry.reg === modalTakeoffReg && entry.takeoff)
+      .map(entry => entry.idx)
+      .pop();
+    if (lastIdx === undefined) return prevLog;
+    return prevLog.map((entry, idx) =>
+      idx === lastIdx
+        ? { ...entry, takeoff: modalTakeoffValue }
+        : entry
+    );
+  });
+  closeTakeoffModal();
+};
 
 const renderAircraft = (
   regs: string[],
@@ -648,17 +714,23 @@ const renderAircraft = (
 
           {/* Take-off és Landed idő kijelzése */}
           {timestamps[reg]?.takeoff && (
-            <div style={{
-              fontSize: `${14 * scale}px`,
-              color: "white",
-              backgroundColor: "black",
-              borderRadius: `${6 * scale}px`,
-              padding: `${6 * scale}px`,
-              fontWeight: "bold",
-              marginTop: `${8 * scale}px`,
-              boxShadow: "0px 0px 10px rgba(0, 255, 0, 0.6)",
-            }}>
-              Take-off: {timestamps[reg].takeoff}
+            <div
+              style={{
+                fontSize: `${14 * scale}px`,
+                color: "white",
+                backgroundColor: "black",
+                borderRadius: `${6 * scale}px`,
+                padding: `${6 * scale}px`,
+                fontWeight: "bold",
+                marginTop: `${8 * scale}px`,
+                boxShadow: "0px 0px 10px rgba(0, 255, 0, 0.6)",
+                cursor: "pointer",
+                // textDecoration: "underline", // Eltávolítva, hogy ne legyen aláhúzva
+              }}
+              title="Click to edit takeoff time"
+              onClick={() => openTakeoffModal(reg)}
+            >
+              Take-off: {getOffsetTime(timestamps[reg].takeoff)}
             </div>
           )}
           {timestamps[reg]?.landed && (
@@ -672,7 +744,7 @@ const renderAircraft = (
               marginTop: `${8 * scale}px`,
               boxShadow: "0px 0px 10px rgba(0, 0, 255, 0.6)",
             }}>
-              Landed: {timestamps[reg].landed}
+              Landed: {getOffsetTime(timestamps[reg].landed)}
             </div>
           )}
 
@@ -728,7 +800,21 @@ const renderAircraft = (
 
 
 <Section title="LHNY AFIS - by Ludwig Schwarz">
-    <h2>Size:</h2>
+    <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+      <div>
+        <label style={{ fontWeight: "bold", fontSize: "18px", marginRight: "8px" }}>Timezone correction:</label>
+        <input
+          type="number"
+          min={-9}
+          max={9}
+          step={1}
+          value={timeOffset}
+          onChange={e => setTimeOffset(Math.max(-9, Math.min(9, Number(e.target.value))))}
+          style={{ width: "60px", fontSize: "18px", textAlign: "center", borderRadius: "6px", padding: "4px" }}
+        />
+      </div>
+      <div>
+  <h2>Size:</h2>
   <input
     type="range"
     style={{ width: '600px' }} // Fix szélesség, nem hat a skála
@@ -738,7 +824,8 @@ const renderAircraft = (
     value={scale}
     onChange={(e) => setScale(parseFloat(e.target.value))} // A skálaérték frissítése
   />
-
+</div>
+<div>
   <h2>Width:</h2>
    <input
     type="range"
@@ -749,7 +836,9 @@ const renderAircraft = (
     value={boxWidth}
     onChange={(e) => setBoxWidth(parseInt(e.target.value))} // boxWidth frissítése
   />
-      <p><strong>Adjust sizes with the slider. All data is lost after refreshing the page!</strong></p>
+</div>
+    </div>
+    <p><strong>Adjust sizes with the slider. All data is lost after refreshing the page!</strong></p>
 <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
   <button
     style={{
@@ -1152,7 +1241,7 @@ const renderAircraft = (
                         }}
                       />
                     ) : (
-                      takeoff
+                      getOffsetTime(takeoff)
                     )}
                   </td>
                   <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
@@ -1204,7 +1293,7 @@ const renderAircraft = (
                         }}
                       />
                     ) : (
-                      landed
+                      getOffsetTime(landed)
                     )}
                   </td>
                   <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>
@@ -1450,8 +1539,8 @@ const renderAircraft = (
             }}
           >
             <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{takeoff || "---"}</td>
-            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{landed || "---"}</td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{getOffsetTime(takeoff) || "---"}</td>
+            <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{getOffsetTime(landed) || "---"}</td>
           </tr>
         ))}
     </tbody>
@@ -1653,6 +1742,93 @@ The AFIS Log summarizes the day’s operations by listing the first takeoff and 
         </button>
         <button
           onClick={closeCrewSquawkModal}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            borderRadius: "4px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{isTakeoffModalOpen && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100vw",
+      height: "100vh",
+      backgroundColor: "rgba(0, 0, 0, 0.6)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1000,
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
+    }}
+    tabIndex={-1}
+    onKeyDown={(e) => {
+      if (e.key === "Escape") closeTakeoffModal();
+      if (e.key === "Enter") saveTakeoffModal();
+    }}
+  >
+    <div
+      style={{
+        backgroundColor: "#222",
+        padding: "20px",
+        borderRadius: "12px",
+        textAlign: "center",
+        minWidth: "320px",
+        color: "white",
+        maxWidth: "75vw",
+        width: "100%",
+        margin: "0 auto",
+        boxSizing: "border-box",
+      }}
+    >
+      <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>
+        Edit Takeoff Time for {modalTakeoffReg}
+      </h3>
+      <input
+        type="time"
+        value={modalTakeoffValue}
+        onChange={(e) => setModalTakeoffValue(e.target.value)}
+        style={{
+          padding: "10px",
+          borderRadius: "4px",
+          fontSize: "16px",
+          width: "80%",
+          marginBottom: "10px",
+          textAlign: "center",
+        }}
+        autoFocus
+        step={60}
+        // Note: setSelectionRange is not supported for input type="time"
+      />
+      <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+        <button
+          onClick={saveTakeoffModal}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#28a745",
+            color: "white",
+            borderRadius: "4px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Save
+        </button>
+        <button
+          onClick={closeTakeoffModal}
           style={{
             padding: "10px 20px",
             backgroundColor: "#dc3545",
