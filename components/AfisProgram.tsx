@@ -506,7 +506,17 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
 
 const openTakeoffModal = (reg: string) => {
   setModalTakeoffReg(reg);
-  setModalTakeoffValue(timestamps[reg]?.takeoff || "");
+  // Always show the corrected (local) time in the modal input
+  const raw = timestamps[reg]?.takeoff || "";
+  let local = raw;
+  if (raw && raw.match(/^\d{2}:\d{2}$/)) {
+    const [h, m] = raw.split(":").map(Number);
+    let localHour = h + timeOffset;
+    if (localHour < 0) localHour += 24;
+    if (localHour > 23) localHour -= 24;
+    local = `${localHour.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  }
+  setModalTakeoffValue(local);
   setIsTakeoffModalOpen(true);
 };
 
@@ -518,11 +528,22 @@ const closeTakeoffModal = () => {
 
 const saveTakeoffModal = () => {
   if (!modalTakeoffReg) return;
+
+  // Convert modalTakeoffValue (which is in corrected time) back to UTC (uncorrected) before saving
+  let corrected = modalTakeoffValue;
+  if (corrected && corrected.match(/^\d{2}:\d{2}$/)) {
+    const [h, m] = corrected.split(":").map(Number);
+    let utcHour = h - timeOffset;
+    if (utcHour < 0) utcHour += 24;
+    if (utcHour > 23) utcHour -= 24;
+    corrected = `${utcHour.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  }
+
   setTimestamps((prev) => ({
     ...prev,
     [modalTakeoffReg]: {
       ...prev[modalTakeoffReg],
-      takeoff: modalTakeoffValue,
+      takeoff: corrected,
     },
   }));
   setDetailedFlightLog((prevLog) => {
@@ -534,7 +555,7 @@ const saveTakeoffModal = () => {
     if (lastIdx === undefined) return prevLog;
     return prevLog.map((entry, idx) =>
       idx === lastIdx
-        ? { ...entry, takeoff: modalTakeoffValue }
+        ? { ...entry, takeoff: corrected }
         : entry
     );
   });
@@ -1797,7 +1818,10 @@ The AFIS Log summarizes the day’s operations by listing the first takeoff and 
       </h3>
       <input
         type="time"
-        value={modalTakeoffValue}
+        value={modalTakeoffValue
+          // Only convert to local time for display if the modal just opened, not on every render
+          // So, always store and edit the local (corrected) value in modalTakeoffValue
+        }
         onChange={(e) => setModalTakeoffValue(e.target.value)}
         style={{
           padding: "10px",
@@ -1809,7 +1833,6 @@ The AFIS Log summarizes the day’s operations by listing the first takeoff and 
         }}
         autoFocus
         step={60}
-        // Note: setSelectionRange is not supported for input type="time"
       />
       <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
         <button
@@ -1866,3 +1889,4 @@ const Section: React.FC<{ title: string; children: React.ReactNode; noMinHeight?
 );
 
 export default AfisProgram;
+
