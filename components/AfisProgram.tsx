@@ -2195,7 +2195,11 @@ The AFIS Log summarizes the day’s operations by listing the first takeoff and 
   );
 };
 
-const Section: React.FC<{ title: string; children: React.ReactNode; noMinHeight?: boolean }> = ({ title, children, noMinHeight }) => (
+const Section: React.FC<{ 
+  title: string | React.ReactNode; // Módosítva hogy elfogadjon React.ReactNode-ot is
+  children: React.ReactNode; 
+  noMinHeight?: boolean;
+}> = ({ title, children, noMinHeight }) => (
   <div
     style={{
       backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -2204,12 +2208,14 @@ const Section: React.FC<{ title: string; children: React.ReactNode; noMinHeight?
       marginBottom: "15px",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       color: "white",
-      minHeight: noMinHeight ? undefined : "330px", // Conditionally apply minHeight
+      minHeight: noMinHeight ? undefined : "330px",
       display: "flex",
       flexDirection: "column",
     }}
   >
-    <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px", marginTop: 0 }}>{title}</h2>
+    <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "10px", marginTop: 0 }}>
+      {title}
+    </h2>
     <div style={{ flex: 1 }}>{children}</div>
   </div>
 );
