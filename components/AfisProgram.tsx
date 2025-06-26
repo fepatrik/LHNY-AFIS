@@ -22,6 +22,7 @@ const AfisProgram = () => {
   const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
   const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
   const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
+  const [qnh, setQnh] = useState(1013); // QNH állapot
   const [trainingBoxDetails, setTrainingBoxDetails] = useState<{ [reg: string]: { taskHeight: string } }>({});
   const [showTable, setShowTable] = useState(true);
   const [flightLog, setFlightLog] = useState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>([]);
@@ -29,13 +30,57 @@ const AfisProgram = () => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
   const [aircraftTGStatus, setAircraftTGStatus] = useState<{ [key: string]: 'T/G' | 'F/S' }>({});
   const [isCrewSquawkModalOpen, setIsCrewSquawkModalOpen] = useState(false);
-  const [modalReg, setModalReg] = useState<string>(""); // Registration for the modal
-  const [modalCrew, setModalCrew] = useState<string>(""); // Crew input value
-  const [modalSquawk, setModalSquawk] = useState<string>(""); // Squawk input value
+  const [modalReg, setModalReg] = useState<string>("");
+  const [modalCrew, setModalCrew] = useState<string>("");
+  const [modalSquawk, setModalSquawk] = useState<string>("");
   const [timeOffset, setTimeOffset] = useState<number>(2); // Időzóna korrekció, alapból +2
   const [isTakeoffModalOpen, setIsTakeoffModalOpen] = useState(false);
   const [modalTakeoffReg, setModalTakeoffReg] = useState<string>("");
   const [modalTakeoffValue, setModalTakeoffValue] = useState<string>("");
+  const [isAddForeignAircraftModalOpen, setIsAddForeignAircraftModalOpen] = useState(false);
+  const [foreignAircraftReg, setForeignAircraftReg] = useState("");
+  const [foreignAircraftOnFreq, setForeignAircraftOnFreq] = useState(true);
+  const [foreignAircrafts, setForeignAircrafts] = useState<Set<string>>(new Set());
+
+  const openAddForeignAircraftModal = () => {
+    setIsAddForeignAircraftModalOpen(true);
+    setForeignAircraftReg("");
+    setForeignAircraftOnFreq(true);
+  };
+
+  const closeAddForeignAircraftModal = () => {
+    setIsAddForeignAircraftModalOpen(false);
+    setForeignAircraftReg("");
+    setForeignAircraftOnFreq(true);
+  };
+
+  const handleAddForeignAircraft = () => {
+    if (!foreignAircraftReg.trim()) return;
+    
+    const regToAdd = foreignAircraftReg.toUpperCase();
+
+    // Check all possible lists for duplicate registration
+    if (
+      crossCountry.includes(regToAdd) ||
+      apron.includes(regToAdd) ||
+      taxiing.includes(regToAdd) ||
+      holdingPoint.includes(regToAdd) ||
+      visualCircuit.includes(regToAdd) ||
+      localIR.includes(regToAdd) ||
+      Object.keys(trainingBox).includes(regToAdd)
+    ) {
+      alert("This registration already exists dumbass!");
+      return;
+    }
+    
+    setCrossCountry(prev => [...prev, regToAdd]);
+    setCrossCountryFrequency(prev => ({
+      ...prev,
+      [regToAdd]: foreignAircraftOnFreq
+    }));
+    setForeignAircrafts(prev => new Set(prev).add(regToAdd));
+    closeAddForeignAircraftModal();
+  };
 
   const openCrewSquawkModal = (reg: string) => {
     setModalReg(reg);
@@ -100,8 +145,12 @@ const AfisProgram = () => {
       },
     }));
 
-    // Update the detailed flight log with the landing time
-    updateLandingTime(reg, landedTime);
+    // Ha foreign gépről van szó
+    if (foreignAircrafts.has(reg)) {
+      addFlightLog(reg, "", landedTime, "", "");
+    } else {
+      updateLandingTime(reg, landedTime);
+    }
 
     // Reset to default states
     setAircraftStatuses((prev) => ({
@@ -262,7 +311,7 @@ const moveToLocalIRFromTrainingBox = (reg: string) => {
   setLocalIR((prev) => [...prev, reg]); // Hozzáadja a gépet a Local IR-hez
   setLocalIRDetails((prev) => ({
     ...prev,
-    [reg]: { procedure: "---", height: "", clearance: "" }, // Default értékek a Local IR-hez
+    [reg]: { procedure: "Local IR", height: "", clearance: "" }, // Default értékek a Local IR-hez
   }));
 };
 
@@ -297,7 +346,19 @@ const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
       takeoff: takeoffTime,
     },
   }));
-  addFlightLog(reg, takeoffTime, "", squawk, crew);
+
+  if (foreignAircrafts.has(reg)) {
+    // Update existing flight log entry with takeoff time
+    setDetailedFlightLog((prevLog) =>
+      prevLog.map((entry) =>
+        entry.reg === reg && !entry.takeoff
+          ? { ...entry, takeoff: takeoffTime }
+          : entry
+      )
+    );
+  } else {
+    addFlightLog(reg, takeoffTime, "", squawk, crew);
+  }
 };
 
 const moveToTaxiingFromLocalIR = (reg: string) => {
@@ -562,17 +623,17 @@ const saveTakeoffModal = () => {
   closeTakeoffModal();
 };
 
+const [misappState, setMisappState] = useState<{ [reg: string]: number }>({});
+const misappStates = ["MISSED APP", "HOLDING", "OUTBOUND", "ON FINAL", "2/3 MILES"];
+
 const renderAircraft = (
   regs: string[],
-  actions: { label: string; onClick: (reg: string) => void }[],
+  actions: Array<{ label: string; onClick: (reg: string) => void }>,
   pulsing: boolean = false,
   extraContent?: (reg: string, index?: number) => React.ReactNode,
   isCrossCountry: boolean = false
 ) => (
-
-
-
-    <div className="container" style={styles.container}>
+  <div className="container" style={styles.container}>
     {regs.map((reg, index) => {
       // Determine the "On Frequency" status and default if not set
       const onFreq = crossCountryFrequency[reg] ?? true; // Default to true
@@ -713,11 +774,11 @@ const renderAircraft = (
           {localIR.includes(reg) && (
             <>
               <select
-                value={localIRDetails[reg]?.procedure || "---"}
+                value={localIRDetails[reg]?.procedure || "Local IR"}
                 onChange={(e) => handleLocalIRChange(reg, 'procedure', e.target.value)}
                 style={{ marginBottom: `${8 * scale}px`, padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, fontSize: `${16 * scale}px` }}
               >
-                {["---", "NYR","NY", "PQ", "RNP Z", "RNP Z Circle to Land", "RNP Y", "RNP Y Circle to Land", "VOR", "VOR Circle to Land", "VOR TEMPO", "VOR TEMPO  Circle to Land", "NDB", "NDB Circle to Land", "BOR", "BOR Circle to Land", "NDB NCS", "PERIT3D", "PERIT1D", "SENYO1D","SENYO2D","KABAL1D","KABAL2D"].map(option => (
+                {["Local IR", "RNP Z", "RNP Z Circle to Land", "RNP Y", "RNP Y Circle to Land", "VOR", "VOR Circle to Land", "VOR TEMPO", "VOR TEMPO  Circle to Land", "NDB", "NDB Circle to Land", "BOR", "BOR Circle to Land", "NDB NCS", "PERIT 3D", "PERIT 1D", "PERIT 1N", "PERIT 1A", "PERIT1 S", "SENYO 1D","SENYO 2D","KABAL 1D","KABAL 2D"].map(option => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
@@ -728,6 +789,31 @@ const renderAircraft = (
                 placeholder="Additional remark"
                 style={{ padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, color: 'black', marginBottom: `${8 * scale}px`, fontSize: `${16 * scale}px` }}
               />
+              {/* MISAPP/HOLDING/OUTBOUND/ON FINAL/3 MILES button */}
+              {["RNP Z", "RNP Y", "VOR", "BOR", "NDB", "VOR TEMPO", "NDB NCS"].includes(localIRDetails[reg]?.procedure) && (
+                <button
+                  style={{
+                    width: "100%",
+                    marginBottom: `${8 * scale}px`,
+                    padding: `${10 * scale}px`,
+                    fontSize: `${18 * scale}px`,
+                    fontWeight: "bold",
+                    backgroundColor: "#444",
+                    color: "white",
+                    border: "2px solid #fff",
+                    borderRadius: `${8 * scale}px`,
+                    cursor: "pointer",
+                  }}
+                  onClick={() =>
+                    setMisappState((prev) => ({
+                      ...prev,
+                      [reg]: ((prev[reg] ?? 0) + 1) % misappStates.length,
+                    }))
+                  }
+                >
+                  {misappStates[misappState[reg] ?? 0]}
+                </button>
+              )}
             </>
           )}
 
@@ -820,7 +906,9 @@ const renderAircraft = (
 
 
 
-<Section title="LHNY AFIS - by Ludwig Schwarz">
+<Section title="LHNY AFIS - by Ludwig Schwarz" noMinHeight>
+  <div style={{ display: "flex", alignItems: "center", gap: "20px", justifyContent: "space-between" }}>
+    {/* Left side: controls */}
     <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
       <div>
         <label style={{ fontWeight: "bold", fontSize: "18px", marginRight: "8px" }}>Timezone correction:</label>
@@ -859,47 +947,130 @@ const renderAircraft = (
   />
 </div>
     </div>
-    <p><strong>Adjust sizes with the slider. All data is lost after refreshing the page!</strong></p>
-<div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-  <button
-    style={{
-      padding: "10px 20px",
-      fontSize: "16px",
-      backgroundColor: "#007BFF",
-      color: "white",
-      borderRadius: "8px",
-      border: "none",
-      cursor: "pointer",
-    }}
-    onClick={resetSizes}
-  >
-    Reset size to default
-  </button>
-  <button
-    style={{
-      padding: "10px 20px",
-      fontSize: "16px",
-      backgroundColor: "#28a745",
-      color: "white",
-      borderRadius: "8px",
-      border: "none",
-      cursor: "pointer",
-    }}
-    onClick={() => setIsHelpModalOpen(true)}
-  >
-    Help
-  </button>
-</div>
+  </div>
+  <p><strong>Adjust sizes with the slider. All data is lost after refreshing the page!</strong></p>
+  <div style={{ display: "flex", alignItems: "center", gap: "24px", marginTop: "10px", justifyContent: "space-between" }}>
+    {/* Reset/Help buttons left */}
+    <div style={{ display: "flex", gap: "10px" }}>
+      <button
+        style={{
+          padding: "10px 20px",
+          fontSize: "16px",
+          backgroundColor: "#007BFF",
+          color: "white",
+          borderRadius: "8px",
+          border: "none",
+          cursor: "pointer",
+        }}
+        onClick={resetSizes}
+      >
+        Reset size to default
+      </button>
+      <button
+        style={{
+          padding: "10px 20px",
+          fontSize: "16px",
+          backgroundColor: "#28a745",
+          color: "white",
+          borderRadius: "8px",
+          border: "none",
+          cursor: "pointer",
+        }}
+        onClick={() => setIsHelpModalOpen(true)}
+      >
+        Help
+      </button>
+    </div>
+    {/* QNH right aligned */}
+    <div style={{ display: "flex", alignItems: "center", gap: "16px", marginLeft: "auto" }}>
+      <span style={{ fontWeight: "bold", fontSize: "32px", letterSpacing: "2px" }}>QNH</span>
+      <button
+        style={{
+          padding: "4px 14px",
+          fontSize: "24px",
+          borderRadius: "8px 0 0 8px",
+          border: "2px solid #007BFF",
+          background: "#222",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
+          outline: "none",
+        }}
+        onClick={() => setQnh(q => Math.max(900, Number(q) - 1))}
+        tabIndex={-1}
+      >-</button>
+      <input
+        type="text"
+        value={qnh}
+        maxLength={4}
+        pattern="\d{4}"
+        onChange={e => {
+          const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+          setQnh(val ? parseInt(val, 10) : "");
+        }}
+        style={{
+          width: "90px",
+          fontSize: "28px",
+          textAlign: "center",
+          borderRadius: "0",
+          padding: "6px",
+          background: "#fff",
+          color: "#222",
+          fontWeight: "bold",
+          borderTop: "2px solid #007BFF",
+          borderBottom: "2px solid #007BFF",
+          borderLeft: "none",
+          borderRight: "none",
+          outline: "none",
+        }}
+        inputMode="numeric"
+        placeholder="----"
+      />
+      <button
+        style={{
+          padding: "4px 14px",
+          fontSize: "24px",
+          borderRadius: "0 8px 8px 0",
+          border: "2px solid #007BFF",
+          background: "#222",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
+          outline: "none",
+        }}
+        onClick={() => setQnh(q => Math.min(1100, Number(q) + 1))}
+        tabIndex={-1}
+      >+</button>
+    </div>
+  </div>
 </Section>
 
-
-<Section title="Cross Country">
+<Section title={
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <span>Cross Country</span>
+    <button
+      style={{
+        padding: "10px 20px",
+        fontSize: "16px",
+        backgroundColor: "#007BFF",
+        color: "white",
+        borderRadius: "8px",
+        border: "none",
+        cursor: "pointer",
+        marginLeft: "20px"
+      }}
+      onClick={openAddForeignAircraftModal}
+    >
+      Add arriving foreign aircraft
+    </button>
+  </div>
+}>
   {renderAircraft(
     crossCountry,
     [
-      { label: "Join VC", onClick: moveToVisualFromCrossCountry },
-      { label: "Approach", onClick: moveToLocalIRFromCrossCountry },
-      { label: "Vacated", onClick: moveToTaxiingFromCrossCountry }, // New button added
+      { label: "Join VC", onClick: (reg) => moveToVisualFromCrossCountry(reg) },
+      { label: "Approach", onClick: (reg) => moveToLocalIRFromCrossCountry(reg) },
+      { label: "Vacated", onClick: (reg) => moveToTaxiingFromCrossCountry(reg) }
     ],
     false,
     (reg) => (
@@ -908,9 +1079,102 @@ const renderAircraft = (
         placeholder="Proceeding to..."
       />
     ),
-    true // Flag indicating Cross Country state
+    true
   )}
 </Section>
+
+{/* Add this modal component near the other modals */}
+  {isAddForeignAircraftModalOpen && (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100vw",
+      height: "100vh",
+      backgroundColor: "rgba(0, 0, 0, 0.6)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1000,
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
+    }}
+    tabIndex={-1}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") handleAddForeignAircraft();
+      if (e.key === "Escape") closeAddForeignAircraftModal();
+    }}
+    >
+      <div style={{
+        backgroundColor: "#222",
+        padding: "20px",
+        borderRadius: "12px",
+        textAlign: "center",
+        minWidth: "320px",
+        color: "white",
+        maxWidth: "75vw",
+        width: "100%",
+        margin: "0 auto",
+        boxSizing: "border-box",
+      }}>
+        <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Add Foreign Aircraft</h3>
+        <input
+          type="text"
+          value={foreignAircraftReg}
+          onChange={(e) => setForeignAircraftReg(e.target.value.toUpperCase())}
+          placeholder="Registration"
+          style={{
+            padding: "10px",
+            borderRadius: "4px",
+            fontSize: "16px",
+            width: "30%", // Changed from 80% to 300px fixed width
+            marginBottom: "15px",
+            textAlign: "center",
+          }}
+          autoFocus
+        />
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ fontSize: "16px" }}>
+            <input
+              type="checkbox"
+              checked={foreignAircraftOnFreq}
+              onChange={(e) => setForeignAircraftOnFreq(e.target.checked)}
+              style={{ marginRight: "8px", transform: "scale(1.2)" }}
+            />
+            On Frequency
+          </label>
+        </div>
+        <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+          <button
+            onClick={handleAddForeignAircraft}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#28a745",
+              color: "white",
+              borderRadius: "4px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Add
+          </button>
+          <button
+            onClick={closeAddForeignAircraftModal}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#dc3545",
+              color: "white",
+              borderRadius: "4px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
 
 <div style={{ display: "flex", width: "100%", marginBottom: "15px" }}>
   <div style={{ flex: 1, marginRight: "10px" }}>
@@ -1451,7 +1715,7 @@ const renderAircraft = (
         style={{
           backgroundColor: "black",
           padding: "20px",
-          borderRadius: "8px",
+          borderRadius: "4px",
           textAlign: "center",
           color: "white",
           maxWidth: "75vw", // Max szélesség 75%
@@ -1524,7 +1788,7 @@ const renderAircraft = (
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       color: "white",
       marginBottom: "20px",
-      fontSize: "18px", // Font size for the table
+      fontSize: "18px",
     }}
   >
     <thead>
@@ -1535,20 +1799,23 @@ const renderAircraft = (
       </tr>
     </thead>
     <tbody>
+      {/* Regular aircraft entries */}
       {Object.entries(
-        detailedFlightLog.reduce((acc, { reg, takeoff, landed }) => {
-          if (!acc[reg]) {
-            acc[reg] = { takeoff, landed };
-          } else {
-            if (takeoff && (!acc[reg].takeoff || takeoff < acc[reg].takeoff)) {
-              acc[reg].takeoff = takeoff;
+        detailedFlightLog
+          .filter(entry => !foreignAircrafts.has(entry.reg))
+          .reduce((acc, { reg, takeoff, landed }) => {
+            if (!acc[reg]) {
+              acc[reg] = { takeoff, landed };
+            } else {
+              if (takeoff && (!acc[reg].takeoff || takeoff < acc[reg].takeoff)) {
+                acc[reg].takeoff = takeoff;
+              }
+              if (landed && (!acc[reg].landed || landed > acc[reg].landed)) {
+                acc[reg].landed = landed;
+              }
             }
-            if (landed && (!acc[reg].landed || landed > acc[reg].landed)) {
-              acc[reg].landed = landed;
-            }
-          }
-          return acc;
-        }, {} as { [reg: string]: { takeoff: string; landed: string } })
+            return acc;
+          }, {} as { [reg: string]: { takeoff: string; landed: string } })
       )
         .sort(([, a], [, b]) => (a.takeoff || "").localeCompare(b.takeoff || ""))
         .map(([reg, { takeoff, landed }]) => (
@@ -1565,6 +1832,64 @@ const renderAircraft = (
         ))}
     </tbody>
   </table>
+
+  {/* Foreign Aircraft Table */}
+  {Array.from(foreignAircrafts).length > 0 && (
+    <>
+      <h3 style={{ marginTop: "30px", marginBottom: "15px" }}>Foreign AFIS Log</h3>
+      <table
+        style={{
+          width: "60%",
+          marginLeft: "0",
+          borderCollapse: "collapse",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          color: "white",
+          marginBottom: "20px",
+          fontSize: "18px",
+        }}
+      >
+        <thead>
+          <tr style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
+            <th style={{ padding: "10px", border: "1px solid white" }}>Registration</th>
+            <th style={{ padding: "10px", border: "1px solid white" }}>First Takeoff</th>
+            <th style={{ padding: "10px", border: "1px solid white" }}>Last Landing</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(
+            detailedFlightLog
+              .filter(entry => foreignAircrafts.has(entry.reg))
+              .reduce((acc, { reg, takeoff, landed }) => {
+                if (!acc[reg]) {
+                  acc[reg] = { takeoff, landed };
+                } else {
+                  if (takeoff && (!acc[reg].takeoff || takeoff < acc[reg].takeoff)) {
+                    acc[reg].takeoff = takeoff;
+                  }
+                  if (landed && (!acc[reg].landed || landed > acc[reg].landed)) {
+                    acc[reg].landed = landed;
+                  }
+                }
+                return acc;
+              }, {} as { [reg: string]: { takeoff: string; landed: string } })
+          )
+            .sort(([, a], [, b]) => (a.takeoff || "").localeCompare(b.takeoff || ""))
+            .map(([reg, { takeoff, landed }]) => (
+              <tr
+                key={reg}
+                style={{
+                  backgroundColor: "rgba(0, 0, 0, 0.7)",
+                }}
+              >
+                <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{reg}</td>
+                <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{getOffsetTime(takeoff) || "---"}</td>
+                <td style={{ padding: "10px", border: "1px solid white", textAlign: "center" }}>{getOffsetTime(landed) || "---"}</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </>
+  )}
 </Section>
 	  
 	  
@@ -1695,7 +2020,7 @@ The AFIS Log summarizes the day’s operations by listing the first takeoff and 
       left: 0,
       width: "100vw",
       height: "100vh",
-      backgroundColor: "rgba(0, 0, 0, 0.6)",
+      backgroundColor: "rgba(0,  0, 0, 0.6)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
