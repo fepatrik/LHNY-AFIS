@@ -22,7 +22,7 @@ const AfisProgram = () => {
   const [scale, setScale] = useState(1); // Új állapot a csúszka értékéhez
   const [searchTerm, setSearchTerm] = useState<string>(""); // Keresési kifejezés
   const [boxWidth, setBoxWidth] = useState(180); // Alapértelmezett szélesség 180px
-  const [qnh, setQnh] = useState(1013); // QNH állapot
+  const [qnh, setQnh] = useState<number>(1013); // QNH állapot
   const [trainingBoxDetails, setTrainingBoxDetails] = useState<{ [reg: string]: { taskHeight: string } }>({});
   const [showTable, setShowTable] = useState(true);
   const [flightLog, setFlightLog] = useState<{ reg: string; takeoff: string | ""; landed: string | "" }[]>([]);
@@ -1006,7 +1006,8 @@ const renderAircraft = (
         pattern="\d{4}"
         onChange={e => {
           const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-          setQnh(val ? parseInt(val, 10) : "");
+          // Ha van érték, akkor parseInt, ha nincs, akkor marad 1013
+          setQnh(val ? parseInt(val, 10) : 1013);
         }}
         style={{
           width: "90px",
