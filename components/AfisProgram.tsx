@@ -11,7 +11,7 @@ const AfisProgram = () => {
   const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
   const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>({});
   const [crossCountry, setCrossCountry] = useState<string[]>([]);
-  const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
+  const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA","BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
   const [newReg, setNewReg] = useState<string>("");
   const [localIR, setLocalIR] = useState<string[]>([]);
   const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => ({ ...localIRDetailsStore }));
@@ -558,7 +558,7 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
     const idx = visualCircuit.indexOf(reg);
     if (idx < visualCircuit.length - 1) {
       const newVC = [...visualCircuit];
-      [newVC[idx + 1], newVC[idx]] = [newVC[idx], newVC[idx + 1]];
+      [newVC[idx + 1], newVC[idx]] = [newVC[idx + 1], newVC[idx]];
       setVisualCircuit(newVC);
     }
   };
@@ -891,8 +891,16 @@ const renderAircraft = (
   </div>
 );
 
+const getAircraftGroup = (reg: string) => {
+  const piperAircraft = ["BAK", "BED", "BJA", "BEC", "BEY","BEZ","BFE","BIY","BJC","BJD","TUP","TUQ","TUR"];
+  const cessnaAircraft = ["SUK", "SKV", "SJK", "BAF", "SLW","PPL"];
+  const multiAircraft = ["BFJ", "BFI"];
 
-
+  if (piperAircraft.includes(reg)) return "Piper";
+  if (cessnaAircraft.includes(reg)) return "Cessna";
+  if (multiAircraft.includes(reg)) return "Multi";
+  return "Other";
+};
 
   return (
     <>
@@ -1297,15 +1305,38 @@ const renderAircraft = (
     minWidth: "300px", // Minimum szélesség
   }}
 />
-  {renderAircraft(
-    [...apron]
-      .filter((reg) => reg.includes(searchTerm)) // Szűrés a keresési feltétel alapján
-      .sort((a, b) => a.localeCompare(b)), // Sort the array alphabetically
-    [
-      { label: "Holding Point", onClick: moveToHoldingPointFromApron },
-	  { label: "Taxi", onClick: moveToTaxiFromApron },
-    ]
-  )}
+  {/* Group headers */}
+  {["Piper", "Cessna", "Multi", "Other"].map(groupName => {
+    const groupAircraft = [...apron]
+      .filter(reg => reg.includes(searchTerm))
+      .filter(reg => getAircraftGroup(reg) === groupName)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (groupAircraft.length === 0) return null;
+
+    return (
+      <div key={groupName} style={{ marginBottom: "20px" }}>
+        <h3 style={{ 
+          color: "white", 
+          borderBottom: "2px solid white",
+          paddingBottom: "5px",
+          marginBottom: "10px" 
+        }}>
+          {groupName}
+        </h3>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+          {renderAircraft(
+            groupAircraft,
+            [
+              { label: "Holding Point", onClick: moveToHoldingPointFromApron },
+              { label: "Taxi", onClick: moveToTaxiFromApron },
+            ]
+          )}
+        </div>
+      </div>
+    );
+  })}
+
   <div className="flex gap-2" style={{ marginTop: "10px" }}>
     <input
       type="text"
@@ -1380,7 +1411,7 @@ const renderAircraft = (
     // Állapot a felugró ablakhoz
     const [deleteRowIndex, setDeleteRowIndex] = useState<{ tableIndex: number; rowIndex: number } | null>(null);
 
-    const handleAddRow = (tableIndex: number, rowIndex: number) => {
+    const handleAddRow = (tableIndex: number, rowIndex: number, position: 'above' | 'below') => {
       const newEntry = {
         serial: detailedFlightLog.length + 1,
         reg: "",
@@ -1391,7 +1422,8 @@ const renderAircraft = (
         isNew: true,
       };
       const updatedLog = [...detailedFlightLog];
-      updatedLog.splice(tableIndex * 33 + rowIndex, 0, newEntry);
+      const insertIndex = tableIndex * 33 + rowIndex + (position === 'below' ? 1 : 0);
+      updatedLog.splice(insertIndex, 0, newEntry);
       setDetailedFlightLog(
         updatedLog.map((entry, idx) => ({ ...entry, serial: idx + 1 }))
       );
@@ -1590,7 +1622,7 @@ const renderAircraft = (
                       }}
                     >
                       <button
-                        onClick={() => handleAddRow(tableIndex, rowIndex)}
+                        onClick={() => handleAddRow(tableIndex, rowIndex, 'above')}
                         style={{
                           padding: "5px 10px",
                           backgroundColor: "green",
@@ -1598,9 +1630,26 @@ const renderAircraft = (
                           borderRadius: "4px",
                           border: "none",
                           cursor: "pointer",
+                          fontSize: "12px",
                         }}
+                        title="Add row above"
                       >
-                        +
+                        ↑ Add row above
+                      </button>
+                      <button
+                        onClick={() => handleAddRow(tableIndex, rowIndex, 'below')}
+                        style={{
+                          padding: "5px 10px",
+                          backgroundColor: "green",
+                          color: "white",
+                          borderRadius: "4px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                        }}
+                        title="Add row below"
+                      >
+                        ↓ Add row below
                       </button>
                       <button
                         onClick={() => setDeleteRowIndex({ tableIndex, rowIndex })}
@@ -1611,9 +1660,10 @@ const renderAircraft = (
                           borderRadius: "4px",
                           border: "none",
                           cursor: "pointer",
+                          fontSize: "12px",
                         }}
                       >
-                        🗑
+                        🗑 Delete
                       </button>
                     </div>
                   </td>
