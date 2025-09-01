@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from "react";
-import { Analytics } from "@vercel/analytics/next"
 // Move localIRDetails state definition to the top-level (outside the component) to persist between renders
 const localIRDetailsStore: { [key: string]: { procedure: string; height: string; clearance: string } } = {};
 
