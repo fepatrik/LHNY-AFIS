@@ -752,7 +752,7 @@ const renderAircraft = (
                   border: 'none',
                   cursor: 'pointer',
                   fontWeight: 'bold',
-                  fontSize: `${12 * scale}px`,
+                  fontSize: `${16 * scale}px`,
                   flex: 1
                 }}
               >
@@ -771,7 +771,7 @@ const renderAircraft = (
                   border: 'none',
                   cursor: 'pointer',
                   fontWeight: 'bold',
-                  fontSize: `${12 * scale}px`,
+                  fontSize: `${16 * scale}px`,
                   flex: 1
                 }}
               >
@@ -2424,5 +2424,3 @@ const Section: React.FC<{
 );
 
 export default AfisProgram;
-
-
