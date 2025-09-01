@@ -41,6 +41,11 @@ const AfisProgram = () => {
   const [foreignAircraftReg, setForeignAircraftReg] = useState("");
   const [foreignAircraftOnFreq, setForeignAircraftOnFreq] = useState(true);
   const [foreignAircrafts, setForeignAircrafts] = useState<Set<string>>(new Set());
+  const [balkanyActive, setBalkanyActive] = useState(false);
+  const [hajduhadhazActive, setHajduhadhazActive] = useState(false);
+  const [isNightMode, setIsNightMode] = useState(false);
+  const [edgeLights, setEdgeLights] = useState<{ [reg: string]: boolean }>({});
+  const [approachLights, setApproachLights] = useState<{ [reg: string]: boolean }>({});
 
   const openAddForeignAircraftModal = () => {
     setIsAddForeignAircraftModalOpen(true);
@@ -359,6 +364,12 @@ const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
   } else {
     addFlightLog(reg, takeoffTime, "", squawk, crew);
   }
+
+  // Initialize lights as ON when aircraft enters visual circuit in night mode
+  if (isNightMode) {
+    setEdgeLights(prev => ({ ...prev, [reg]: true }));
+    setApproachLights(prev => ({ ...prev, [reg]: true }));
+  }
 };
 
 const moveToTaxiingFromLocalIR = (reg: string) => {
@@ -424,6 +435,11 @@ const resetSizes = () => {
     setLocalIR(localIR.filter((r) => r !== reg));
     setVisualCircuit([...visualCircuit, reg]);
     // Do NOT delete localIRDetails here
+
+    if (isNightMode) {
+      setEdgeLights(prev => ({ ...prev, [reg]: true }));
+      setApproachLights(prev => ({ ...prev, [reg]: true }));
+    }
   };
 
 const addAircraftToApron = () => {
@@ -505,11 +521,21 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
       return copy;
     });
     setVisualCircuit([...visualCircuit, reg]);
+
+    if (isNightMode) {
+      setEdgeLights(prev => ({ ...prev, [reg]: true }));
+      setApproachLights(prev => ({ ...prev, [reg]: true }));
+    }
   };
 
   const moveToVisualFromCrossCountry = (reg: string) => {
     setCrossCountry(crossCountry.filter((r) => r !== reg));
     setVisualCircuit([...visualCircuit, reg]);
+
+    if (isNightMode) {
+      setEdgeLights(prev => ({ ...prev, [reg]: true }));
+      setApproachLights(prev => ({ ...prev, [reg]: true }));
+    }
   };
 
   // Helper to persist localIRDetails to the store and state
@@ -558,7 +584,7 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
     const idx = visualCircuit.indexOf(reg);
     if (idx < visualCircuit.length - 1) {
       const newVC = [...visualCircuit];
-      [newVC[idx + 1], newVC[idx]] = [newVC[idx + 1], newVC[idx]];
+      [newVC[idx + 1], newVC[idx]] = [newVC[idx], newVC[idx + 1]]; // A sorrend megcserélve
       setVisualCircuit(newVC);
     }
   };
@@ -712,6 +738,48 @@ const renderAircraft = (
             </button>
           </div>
 		  
+          {isNightMode && regs === visualCircuit && (
+            <div style={{ display: "flex", gap: "5px", marginBottom: "10px" }}>
+              <button
+                onClick={() => setEdgeLights(prev => ({
+                  ...prev,
+                  [reg]: !prev[reg]
+                }))}
+                style={{
+                  padding: `${4 * scale}px`,
+                  backgroundColor: edgeLights[reg] ? 'green' : 'red',
+                  color: 'white',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: `${12 * scale}px`,
+                  flex: 1
+                }}
+              >
+                Edge Light
+              </button>
+              <button
+                onClick={() => setApproachLights(prev => ({
+                  ...prev,
+                  [reg]: !prev[reg]
+                }))}
+                style={{
+                  padding: `${4 * scale}px`,
+                  backgroundColor: approachLights[reg] ? 'green' : 'red',
+                  color: 'white',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: `${12 * scale}px`,
+                  flex: 1
+                }}
+              >
+                Approach Light
+              </button>
+            </div>
+          )}
 
           {isCrossCountry && (
             <div style={{ marginBottom: `${10 * scale}px` }}>
@@ -760,7 +828,7 @@ const renderAircraft = (
         borderRadius: `${6 * scale}px`,
         color: "black",
         marginBottom: `${8 * scale}px`,
-        fontSize: `${16 * scale}px`, // Increased font size
+        fontSize: `${20 * scale}px`, // Increased font size
         width: `calc(100% - ${12 * scale}px)`, // Mindkét oldalra 6px margó
         marginLeft: `${6 * scale}px`,
         marginRight: `${6 * scale}px`,
@@ -785,9 +853,20 @@ const renderAircraft = (
               <input
                 type="text"
                 value={localIRDetails[reg]?.height || ""}
-                onChange={(e) => handleLocalIRChange(reg, 'height', e.target.value)}
+                onChange={(e) => handleLocalIRChange(reg, 'height', e.target.value.toUpperCase())}
                 placeholder="Additional remark"
-                style={{ padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, color: 'black', marginBottom: `${8 * scale}px`, fontSize: `${16 * scale}px` }}
+                style={{ 
+                  padding: `${6 * scale}px`, 
+                  borderRadius: `${6 * scale}px`, 
+                  color: 'black', 
+                  marginBottom: `${8 * scale}px`, 
+                  fontSize: `${20 * scale}px`,
+                  textTransform: 'uppercase'
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  target.value = target.value.toUpperCase();
+                }}
               />
               {/* MISAPP/HOLDING/OUTBOUND/ON FINAL/3 MILES button */}
               {["RNP Z", "RNP Y", "VOR", "BOR", "NDB", "VOR TEMPO", "NDB NCS"].includes(localIRDetails[reg]?.procedure) && (
@@ -989,8 +1068,52 @@ const getAircraftGroup = (reg: string) => {
         Help
       </button>
     </div>
-    {/* QNH right aligned */}
+    {/* QNH and Airspace section */}
     <div style={{ display: "flex", alignItems: "center", gap: "16px", marginLeft: "auto" }}>
+      {/* Balkány button */}
+      <button
+        style={{
+          padding: "8px 16px",
+          fontSize: "16px",
+          borderRadius: "8px",
+          border: "none",
+          background: balkanyActive ? "#28a745" : "#dc3545",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          minWidth: "120px"
+        }}
+        onClick={() => setBalkanyActive(!balkanyActive)}
+      >
+        <span style={{ marginBottom: "4px" }}>BALKÁNY</span>
+        <span>{balkanyActive ? "ACTIVE" : "NOT ACTIVE"}</span>
+      </button>
+
+      {/* Hajdúhadház button */}
+      <button
+        style={{
+          padding: "8px 16px",
+          fontSize: "16px",
+          borderRadius: "8px",
+          border: "none",
+          background: hajduhadhazActive ? "#28a745" : "#dc3545",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          minWidth: "120px"
+        }}
+        onClick={() => setHajduhadhazActive(!hajduhadhazActive)}
+      >
+        <span style={{ marginBottom: "4px" }}>HAJDÚHADHÁZ</span>
+        <span>{hajduhadhazActive ? "ACTIVE" : "NOT ACTIVE"}</span>
+      </button>
+
       <span style={{ fontWeight: "bold", fontSize: "32px", letterSpacing: "2px" }}>QNH</span>
       <button
         style={{
@@ -1050,6 +1173,26 @@ const getAircraftGroup = (reg: string) => {
         onClick={() => setQnh(q => Math.min(1100, Number(q) + 1))}
         tabIndex={-1}
       >+</button>
+      <button
+        style={{
+          padding: "8px 16px",
+          fontSize: "16px",
+          borderRadius: "8px",
+          border: "none",
+          background: isNightMode ? "#28a745" : "#dc3545",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          minWidth: "120px"
+        }}
+        onClick={() => setIsNightMode(!isNightMode)}
+      >
+        <span style={{ marginBottom: "4px" }}>NIGHT MODE</span>
+        <span>{isNightMode ? "ON" : "OFF"}</span>
+      </button>
     </div>
   </div>
 </Section>
@@ -1084,8 +1227,19 @@ const getAircraftGroup = (reg: string) => {
     false,
     (reg) => (
       <textarea
-        style={{ marginTop: `${8 * scale}px`, padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, color: "black", fontSize: `${16 * scale}px` }}
+        style={{ 
+          marginTop: `${8 * scale}px`, 
+          padding: `${6 * scale}px`, 
+          borderRadius: `${6 * scale}px`, 
+          color: "black", 
+          fontSize: `${20 * scale}px`,
+          textTransform: "uppercase" // Ez az új sor
+        }}
         placeholder="Proceeding to..."
+        onInput={(e) => {
+          const target = e.target as HTMLTextAreaElement;
+          target.value = target.value.toUpperCase();
+        }}
       />
     ),
     true
