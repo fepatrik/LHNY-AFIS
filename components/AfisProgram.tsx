@@ -1446,7 +1446,7 @@ const getAircraftGroup = (reg: string) => {
 </div>
     </div>
   </div>
-  <p><strong>Adjust sizes with the slider. All data is lost after refreshing the page!</strong></p>
+  <p><strong>Data is now stored, even after restarting the computer! Start the day with the reset button. Also you can undo the last 50 actions you made. Arriving foreign ACFT also working now, and you can remove them after added.</strong></p>
   <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "10px", justifyContent: "space-between" }}>
     {/* Reset/Help buttons left */}
     <div style={{ display: "flex", gap: "6px" }}>
@@ -1464,7 +1464,22 @@ const getAircraftGroup = (reg: string) => {
       >
         Reset size to default
       </button>
+
       <button
+        style={{
+          padding: "6px 12px",
+          fontSize: "14px",
+          backgroundColor: "#28a745",
+          color: "white",
+          borderRadius: "6px",
+          border: "none",
+          cursor: "pointer",
+        }}
+        onClick={() => setIsHelpModalOpen(true)}
+      >
+        Help
+      </button>
+	        <button
         style={{
           padding: "6px 12px",
           fontSize: "14px",
@@ -1479,20 +1494,6 @@ const getAircraftGroup = (reg: string) => {
         title="Clear all data and start a new day"
       >
         New day (reset)
-      </button>
-      <button
-        style={{
-          padding: "6px 12px",
-          fontSize: "14px",
-          backgroundColor: "#28a745",
-          color: "white",
-          borderRadius: "6px",
-          border: "none",
-          cursor: "pointer",
-        }}
-        onClick={() => setIsHelpModalOpen(true)}
-      >
-        Help
       </button>
       <button
         style={{
