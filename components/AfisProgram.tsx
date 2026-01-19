@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from "react";
-
+import React, { useEffect, useRef, useState } from "react";
+import { AIRSPACES, Airspace } from "../config/airspace";
+import { CROSS_COUNTRY_DESTINATIONS } from "../config/crossCountryDestinations";
 // Move localIRDetails state definition to the top-level (outside the component) to persist between renders
 const localIRDetailsStore: { [key: string]: { procedure: string; height: string; clearance: string } } = {};
+const DEFAULT_APRON = ["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA","BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"];
 
 const AfisProgram = () => {
   const [taxiing, setTaxiing] = useState<string[]>([]);
@@ -11,7 +13,7 @@ const AfisProgram = () => {
   const [visualCircuit, setVisualCircuit] = useState<string[]>([]);
   const [trainingBox, setTrainingBox] = useState<{ [key: string]: string }>({});
   const [crossCountry, setCrossCountry] = useState<string[]>([]);
-  const [apron, setApron] = useState(["TUR", "TUP", "TUQ", "BEC", "BED", "BEZ", "BJD", "BAK", "BFI", "BFJ", "BJC", "BJA", "BFK", "BEY", "BFE", "BIY", "SKV", "SJK", "SUK", "PPL", "BAF", "SLW"]);
+  const [apron, setApron] = useState(DEFAULT_APRON);
   const [newReg, setNewReg] = useState<string>("");
   const [localIR, setLocalIR] = useState<string[]>([]);
   const [localIRDetails, setLocalIRDetails] = useState<{ [key: string]: { procedure: string; height: string; clearance: string } }>(() => ({ ...localIRDetailsStore }));
@@ -41,6 +43,42 @@ const AfisProgram = () => {
   const [foreignAircraftReg, setForeignAircraftReg] = useState("");
   const [foreignAircraftOnFreq, setForeignAircraftOnFreq] = useState(true);
   const [foreignAircrafts, setForeignAircrafts] = useState<Set<string>>(new Set());
+  // Dinamikus légterek állapota - a config/airspace.ts fájlból származik
+  const [airspaceStatuses, setAirspaceStatuses] = useState<{ [key: string]: boolean }>(() => {
+    const initial: { [key: string]: boolean } = {};
+    AIRSPACES.forEach(airspace => {
+      initial[airspace.id] = false;
+    });
+    return initial;
+  });
+  const [isNightMode, setIsNightMode] = useState(false);
+  const [edgeLights, setEdgeLights] = useState<{ [reg: string]: boolean }>({});
+  const [approachLights, setApproachLights] = useState<{ [reg: string]: boolean }>({});
+  const [showTimeDisplay, setShowTimeDisplay] = useState(true); // Kapcsoló a takeoff/landed idő kijelzéséhez
+  const [crossCountryProceedingTo, setCrossCountryProceedingTo] = useState<{ [reg: string]: string }>({});
+  const [ccAutocompleteOpenFor, setCcAutocompleteOpenFor] = useState<string | null>(null);
+  const [destinationUsage, setDestinationUsage] = useState<{ [destination: string]: number }>({});
+
+  // Persistens "Proceeding to" használati statisztika (localStorage)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("afis2.ccDestinationUsage");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== "object") return;
+      setDestinationUsage(parsed as { [destination: string]: number });
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("afis2.ccDestinationUsage", JSON.stringify(destinationUsage));
+    } catch {
+      // ignore
+    }
+  }, [destinationUsage]);
 
   const openAddForeignAircraftModal = () => {
     setIsAddForeignAircraftModalOpen(true);
@@ -131,62 +169,9 @@ const AfisProgram = () => {
     }
   };
 
-  const moveToTaxiingFromCrossCountry = (reg: string) => {
-    setCrossCountry((prev) => prev.filter((r) => r !== reg));
-    setTaxiing((prev) => [...prev, reg]);
-
-    const landedTime = getCurrentTime(); // Get the current time
-
-    setTimestamps((prev) => ({
-      ...prev,
-      [reg]: {
-        ...prev[reg],
-        landed: landedTime, // Save landing time
-      },
-    }));
-
-    // Ha foreign gépről van szó
-    if (foreignAircrafts.has(reg)) {
-      addFlightLog(reg, "", landedTime, "", "");
-    } else {
-      updateLandingTime(reg, landedTime);
-    }
-
-    // Reset to default states
-    setAircraftStatuses((prev) => ({
-      ...prev,
-      [reg]: 'DUAL',
-    }));
-    setAircraftTGStatus((prev) => ({
-      ...prev,
-      [reg]: 'T/G',
-    }));
-  };
-
-  const moveFirstToLast = () => {
-    setVisualCircuit((prev) => {
-      if (prev.length === 0) return prev; // Ha üres, ne csináljon semmit
-      const updated = [...prev];
-      const first = updated.shift(); // Az első elem eltávolítása
-      if (first) updated.push(first); // Az elsőt a lista végére helyezzük
-      return updated;
-    });
-  };
-
-  const handleSquawkChange = (serial: number, newSquawk: string) => {
-    setDetailedFlightLog((prevLog) =>
-      prevLog.map((entry) =>
-        entry.serial === serial ? { ...entry, squawk: newSquawk } : entry
-      )
-    );
-  };
-
-  const handleCrewChange = (serial: number, newCrew: string) => {
-    setDetailedFlightLog((prevLog) =>
-      prevLog.map((entry) =>
-        entry.serial === serial ? { ...entry, crew: newCrew } : entry
-      )
-    );
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
   const addFlightLog = (reg: string, takeoff: string | "", landed: string | "", squawk: string, crew: string) => {
@@ -213,7 +198,243 @@ const AfisProgram = () => {
     );
   };
 
+  // --- UNDO (utolsó cselekedet visszavonása) ---
+  type UndoSnapshot = {
+    taxiing: string[];
+    holdingPoint: string[];
+    visualCircuit: string[];
+    trainingBox: { [key: string]: string };
+    crossCountry: string[];
+    apron: string[];
+    localIR: string[];
+    localIRDetails: { [key: string]: { procedure: string; height: string; clearance: string } };
+    crossCountryFrequency: { [key: string]: boolean };
+    timestamps: { [key: string]: { takeoff?: string; landed?: string } };
+    trainingBoxDetails: { [reg: string]: { taskHeight: string } };
+    detailedFlightLog: any[];
+    aircraftStatuses: { [key: string]: 'DUAL' | 'SOLO' };
+    aircraftTGStatus: { [key: string]: 'T/G' | 'F/S' };
+    foreignAircrafts: string[];
+    airspaceStatuses: { [key: string]: boolean };
+    isNightMode: boolean;
+    edgeLights: { [reg: string]: boolean };
+    approachLights: { [reg: string]: boolean };
+    qnh: number;
+    timeOffset: number;
+    showTimeDisplay: boolean;
+    crossCountryProceedingTo: { [reg: string]: string };
+    destinationUsage: { [destination: string]: number };
+  };
+
+  const undoStackRef = useRef<UndoSnapshot[]>([]);
+  const UNDO_LIMIT = 50;
+
+  const pushUndoSnapshot = () => {
+    const snap: UndoSnapshot = {
+      taxiing: [...taxiing],
+      holdingPoint: [...holdingPoint],
+      visualCircuit: [...visualCircuit],
+      trainingBox: { ...trainingBox },
+      crossCountry: [...crossCountry],
+      apron: [...apron],
+      localIR: [...localIR],
+      localIRDetails: { ...localIRDetails },
+      crossCountryFrequency: { ...crossCountryFrequency },
+      timestamps: { ...timestamps },
+      trainingBoxDetails: { ...trainingBoxDetails },
+      detailedFlightLog: [...detailedFlightLog],
+      aircraftStatuses: { ...aircraftStatuses },
+      aircraftTGStatus: { ...aircraftTGStatus },
+      foreignAircrafts: Array.from(foreignAircrafts),
+      airspaceStatuses: { ...airspaceStatuses },
+      isNightMode,
+      edgeLights: { ...edgeLights },
+      approachLights: { ...approachLights },
+      qnh,
+      timeOffset,
+      showTimeDisplay,
+      crossCountryProceedingTo: { ...crossCountryProceedingTo },
+      destinationUsage: { ...destinationUsage },
+    };
+
+    undoStackRef.current.push(snap);
+    if (undoStackRef.current.length > UNDO_LIMIT) {
+      undoStackRef.current = undoStackRef.current.slice(-UNDO_LIMIT);
+    }
+  };
+
+  const undoLastAction = () => {
+    const snap = undoStackRef.current.pop();
+    if (!snap) return;
+
+    setTaxiing(snap.taxiing);
+    setHoldingPoint(snap.holdingPoint);
+    setVisualCircuit(snap.visualCircuit);
+    setTrainingBox(snap.trainingBox);
+    setCrossCountry(snap.crossCountry);
+    setApron(snap.apron);
+    setLocalIR(snap.localIR);
+
+    Object.assign(localIRDetailsStore, snap.localIRDetails);
+    setLocalIRDetails({ ...localIRDetailsStore });
+
+    setCrossCountryFrequency(snap.crossCountryFrequency);
+    setTimestamps(snap.timestamps);
+    setTrainingBoxDetails(snap.trainingBoxDetails);
+    setDetailedFlightLog(snap.detailedFlightLog as any);
+    setAircraftStatuses(snap.aircraftStatuses);
+    setAircraftTGStatus(snap.aircraftTGStatus);
+    setForeignAircrafts(new Set(snap.foreignAircrafts));
+    setAirspaceStatuses(snap.airspaceStatuses);
+    setIsNightMode(snap.isNightMode);
+    setEdgeLights(snap.edgeLights);
+    setApproachLights(snap.approachLights);
+    setQnh(snap.qnh);
+    setTimeOffset(snap.timeOffset);
+    setShowTimeDisplay(snap.showTimeDisplay);
+    setCrossCountryProceedingTo(snap.crossCountryProceedingTo);
+    setDestinationUsage(snap.destinationUsage);
+  };
+
+  // Unified aircraft movement system - consolidates all moveto functions
+  const moveAircraft = (
+    reg: string,
+    from: 'apron' | 'taxiing' | 'holdingPoint' | 'visualCircuit' | 'trainingBox' | 'crossCountry' | 'localIR',
+    to: 'apron' | 'taxiing' | 'holdingPoint' | 'visualCircuit' | 'trainingBox' | 'crossCountry' | 'localIR',
+    options?: {
+      resetTimestamp?: boolean;
+      handleLanding?: boolean;
+      handleTakeoff?: boolean;
+      squawk?: string;
+      crew?: string;
+      trainingBoxValue?: string;
+      resetStatuses?: boolean;
+      initializeNightLights?: boolean;
+      setCrossCountryFreq?: boolean;
+    }
+  ) => {
+    pushUndoSnapshot();
+    // Remove from source
+    const stateSetters: Record<string, any> = {
+      apron: setApron,
+      taxiing: setTaxiing,
+      holdingPoint: setHoldingPoint,
+      visualCircuit: setVisualCircuit,
+      trainingBox: setTrainingBox,
+      crossCountry: setCrossCountry,
+      localIR: setLocalIR,
+    };
+
+    if (from === 'trainingBox') {
+      setTrainingBox((prev) => {
+        const copy = { ...prev };
+        delete copy[reg];
+        return copy;
+      });
+    } else {
+      stateSetters[from]((prev: string[]) => prev.filter((r) => r !== reg));
+    }
+
+    // Add to target
+    if (to === 'trainingBox' && options?.trainingBoxValue) {
+      setTrainingBox((prev) => ({ ...prev, [reg]: options.trainingBoxValue! }));
+    } else if (to !== 'trainingBox') {
+      stateSetters[to]((prev: string[]) => [...prev, reg]);
+    }
+
+    // Handle options
+    if (options?.resetTimestamp) {
+      setTimestamps((prev) => {
+        const updated = { ...prev };
+        delete updated[reg];
+        return updated;
+      });
+    }
+
+    if (options?.handleLanding) {
+      const landedTime = getCurrentTime();
+      setTimestamps((prev) => ({
+        ...prev,
+        [reg]: { ...prev[reg], landed: landedTime },
+      }));
+      if (foreignAircrafts.has(reg)) {
+        addFlightLog(reg, '', landedTime, '', '');
+      } else {
+        updateLandingTime(reg, landedTime);
+      }
+    }
+
+    if (options?.handleTakeoff) {
+      const takeoffTime = getCurrentTime();
+      setTimestamps((prev) => ({
+        ...prev,
+        [reg]: { ...prev[reg], takeoff: takeoffTime },
+      }));
+      if (!foreignAircrafts.has(reg)) {
+        addFlightLog(reg, takeoffTime, '', options.squawk || '', options.crew || '');
+      } else {
+        setDetailedFlightLog((prevLog) =>
+          prevLog.map((entry) =>
+            entry.reg === reg && !entry.takeoff
+              ? { ...entry, takeoff: takeoffTime }
+              : entry
+          )
+        );
+      }
+    }
+
+    if (options?.resetStatuses) {
+      setAircraftStatuses((prev) => ({ ...prev, [reg]: 'DUAL' }));
+      setAircraftTGStatus((prev) => ({ ...prev, [reg]: 'T/G' }));
+    }
+
+    if (options?.initializeNightLights && isNightMode) {
+      setEdgeLights((prev) => ({ ...prev, [reg]: true }));
+      setApproachLights((prev) => ({ ...prev, [reg]: true }));
+    }
+
+    if (options?.setCrossCountryFreq) {
+      setCrossCountryFrequency((prev) => ({ ...prev, [reg]: true }));
+    }
+  };
+
+  // Refactored movement functions using the unified system
+  const moveToTaxiingFromCrossCountry = (reg: string) => {
+    moveAircraft(reg, 'crossCountry', 'taxiing', {
+      handleLanding: true,
+      resetStatuses: true,
+    });
+  };
+
+  const moveFirstToLast = () => {
+    pushUndoSnapshot();
+    setVisualCircuit((prev) => {
+      if (prev.length === 0) return prev; // Ha üres, ne csináljon semmit
+      const updated = [...prev];
+      const first = updated.shift(); // Az első elem eltávolítása
+      if (first) updated.push(first); // Az elsőt a lista végére helyezzük
+      return updated;
+    });
+  };
+
+  const handleSquawkChange = (serial: number, newSquawk: string) => {
+    setDetailedFlightLog((prevLog) =>
+      prevLog.map((entry) =>
+        entry.serial === serial ? { ...entry, squawk: newSquawk } : entry
+      )
+    );
+  };
+
+  const handleCrewChange = (serial: number, newCrew: string) => {
+    setDetailedFlightLog((prevLog) =>
+      prevLog.map((entry) =>
+        entry.serial === serial ? { ...entry, crew: newCrew } : entry
+      )
+    );
+  };
+
   const toggleTGFSStatus = (reg: string) => {
+    pushUndoSnapshot();
     setAircraftTGStatus((prevStatuses) => {
       const currentStatus = prevStatuses[reg] || 'T/G';
       const newStatus = currentStatus === 'T/G' ? 'F/S' : 'T/G';
@@ -227,6 +448,7 @@ const AfisProgram = () => {
 
 // Function to toggle the status of an aircraft
 const toggleAircraftStatus = (reg: string) => {
+  pushUndoSnapshot();
   setAircraftStatuses((prevStatuses) => {
     const currentStatus = prevStatuses[reg] || 'DUAL';
     const newStatus = currentStatus === 'DUAL' ? 'SOLO' : 'DUAL';
@@ -269,12 +491,6 @@ const styles = {
   } as React.CSSProperties,
 };
 
-
-  const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
-
 // Idő eltolás segédfüggvény
 const getOffsetTime = (time: string) => {
   if (!time) return "";
@@ -287,132 +503,51 @@ const getOffsetTime = (time: string) => {
   return `${newHour.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 };
 
-const moveToCrossCountryFromApron = (reg: string) => {
-  setApron((prev) => prev.filter((r) => r !== reg)); // Eltávolítja a gépet az Apron állapotból
-  setCrossCountry((prev) => [...prev, reg]);        // Hozzáadja a gépet a Cross Country állapothoz
-};
+  const moveToCrossCountryFromApron = (reg: string) => {
+    moveAircraft(reg, 'apron', 'crossCountry');
+  };
 
-const moveToHoldingPointFromApron = (reg: string) => {
-  setApron((prev) => prev.filter((r) => r !== reg)); // Eltávolítja a gépet az Apron állapotból
-  setHoldingPoint((prev) => [...prev, reg]);        // Hozzáadja a gépet a Holding Point állapothoz
-  setTimestamps((prev) => {
-    const updatedTimestamps = { ...prev };
-    delete updatedTimestamps[reg]; // Reset timestamp when moving from Apron to Holding Point
-    return updatedTimestamps;
-  });
-};
+  const moveToHoldingPointFromApron = (reg: string) => {
+    moveAircraft(reg, 'apron', 'holdingPoint', { resetTimestamp: true });
+  };
 
-const moveToLocalIRFromTrainingBox = (reg: string) => {
-  setTrainingBox((prev) => {
-    const copy = { ...prev };
-    delete copy[reg]; // Törli a gépet a Training Box-ból
-    return copy;
-  });
-  setLocalIR((prev) => [...prev, reg]); // Hozzáadja a gépet a Local IR-hez
-  setLocalIRDetails((prev) => ({
-    ...prev,
-    [reg]: { procedure: "Local IR", height: "", clearance: "" }, // Default értékek a Local IR-hez
-  }));
-};
-
-const moveToHoldingPoint = (reg: string) => {
-  setTaxiing(taxiing.filter((r) => r !== reg));
-  setHoldingPoint([...holdingPoint, reg]);
-  setTimestamps((prev) => {
-    const updatedTimestamps = { ...prev };
-    delete updatedTimestamps[reg]; // Reset timestamp when moving to Holding Point
-    return updatedTimestamps;
-  });
-};
-
-const moveBackToTaxiing = (reg: string) => {
-  setHoldingPoint(holdingPoint.filter((r) => r !== reg));
-  setTaxiing([...taxiing, reg]);
-  setTimestamps((prev) => {
-    const updatedTimestamps = { ...prev };
-    delete updatedTimestamps[reg]; // Reset timestamp when moving back to Taxiing
-    return updatedTimestamps;
-  });
-};
-
-const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
-  setHoldingPoint((prev) => prev.filter((r) => r !== reg));
-  setVisualCircuit((prev) => [...prev, reg]); // A gépet a lista végére helyezzük
-  const takeoffTime = getCurrentTime();
-  setTimestamps((prev) => ({
-    ...prev,
-    [reg]: {
-      ...prev[reg],
-      takeoff: takeoffTime,
-    },
-  }));
-
-  if (foreignAircrafts.has(reg)) {
-    // Update existing flight log entry with takeoff time
-    setDetailedFlightLog((prevLog) =>
-      prevLog.map((entry) =>
-        entry.reg === reg && !entry.takeoff
-          ? { ...entry, takeoff: takeoffTime }
-          : entry
-      )
-    );
-  } else {
-    addFlightLog(reg, takeoffTime, "", squawk, crew);
-  }
-};
-
-const moveToTaxiingFromLocalIR = (reg: string) => {
-  setLocalIR(localIR.filter((r) => r !== reg));
-  setTaxiing([...taxiing, reg]);
-
-  const landedTime = getCurrentTime(); // Az aktuális idő lekérése
-
-  setTimestamps((prev) => ({
-    ...prev,
-    [reg]: {
-      ...prev[reg],
-      landed: landedTime, // Leszállási idő mentése
-    },
-  }));
-
-  // Frissítsük a detailedFlightLog-ot a leszállási idővel
-  updateLandingTime(reg, landedTime);
-
-  // Reset to default states
-  setAircraftStatuses((prev) => ({
-    ...prev,
-    [reg]: 'DUAL',
-  }));
-  setAircraftTGStatus((prev) => ({
-    ...prev,
-    [reg]: 'T/G',
-  }));
-};
-
-
-const moveToTaxiingFromVisual = (reg: string) => {
-    setVisualCircuit((prev) => prev.filter((r) => r !== reg));
-    setTaxiing((prev) => [...prev, reg]);
-    const landedTime = getCurrentTime();
-    setTimestamps((prev) => ({
+  const moveToLocalIRFromTrainingBox = (reg: string) => {
+    moveAircraft(reg, 'trainingBox', 'localIR');
+    setLocalIRDetails((prev) => ({
       ...prev,
-      [reg]: {
-        ...prev[reg],
-        landed: landedTime,
-      },
+      [reg]: { procedure: 'Local IR', height: '', clearance: '' },
     }));
-    // Update the flight log with landing time
-  updateLandingTime(reg, landedTime); // Biztosítjuk, hogy csak üres mezőt frissít
+  };
 
-    // Reset to default states
-    setAircraftStatuses((prev) => ({
-      ...prev,
-      [reg]: 'DUAL',
-    }));
-    setAircraftTGStatus((prev) => ({
-      ...prev,
-      [reg]: 'T/G',
-    }));
+  const moveToHoldingPoint = (reg: string) => {
+    moveAircraft(reg, 'taxiing', 'holdingPoint', { resetTimestamp: true });
+  };
+
+  const moveBackToTaxiing = (reg: string) => {
+    moveAircraft(reg, 'holdingPoint', 'taxiing', { resetTimestamp: true });
+  };
+
+  const moveToVisualFromHolding = (reg: string, squawk: string, crew: string) => {
+    moveAircraft(reg, 'holdingPoint', 'visualCircuit', {
+      handleTakeoff: true,
+      squawk,
+      crew,
+      initializeNightLights: true,
+    });
+  };
+
+  const moveToTaxiingFromLocalIR = (reg: string) => {
+    moveAircraft(reg, 'localIR', 'taxiing', {
+      handleLanding: true,
+      resetStatuses: true,
+    });
+  };
+
+  const moveToTaxiingFromVisual = (reg: string) => {
+    moveAircraft(reg, 'visualCircuit', 'taxiing', {
+      handleLanding: true,
+      resetStatuses: true,
+    });
   };
 
 const resetSizes = () => {
@@ -420,10 +555,88 @@ const resetSizes = () => {
   setBoxWidth(180); // Alapértelmezett szélesség
 };
 
+  const resetForNewDay = () => {
+    const ok = window.confirm("This will clear ALL displayed data and start a new day. Continue?");
+    if (!ok) return;
+
+    // Clear persisted storage
+    try {
+      localStorage.removeItem("afis2.appState.v1");
+      localStorage.removeItem("afis2.ccDestinationUsage");
+    } catch {
+      // ignore
+    }
+
+    // Clear undo history
+    undoStackRef.current = [];
+
+    // Reset all operational state
+    setTaxiing([]);
+    setHoldingPoint([]);
+    setVisualCircuit([]);
+    setTrainingBox({});
+    setCrossCountry([]);
+    setApron([...DEFAULT_APRON]);
+    setNewReg("");
+    setLocalIR([]);
+
+    Object.keys(localIRDetailsStore).forEach((k) => delete localIRDetailsStore[k]);
+    setLocalIRDetails({});
+
+    setCrossCountryFrequency({});
+    setTimestamps({});
+    setTrainingBoxDetails({});
+    setCrossCountryProceedingTo({});
+    setDestinationUsage({});
+
+    setShowTable(true);
+    setDetailedFlightLog([]);
+    setAircraftStatuses({});
+    setAircraftTGStatus({});
+    setForeignAircrafts(new Set());
+    setForeignAircraftReg("");
+    setForeignAircraftOnFreq(true);
+    setIsAddForeignAircraftModalOpen(false);
+
+    setMisappState({});
+
+    // Reset airspace / night / lights
+    setAirspaceStatuses(() => {
+      const initial: { [key: string]: boolean } = {};
+      AIRSPACES.forEach((airspace) => {
+        initial[airspace.id] = false;
+      });
+      return initial;
+    });
+    setIsNightMode(false);
+    setEdgeLights({});
+    setApproachLights({});
+
+    // Reset common controls
+    setQnh(1013);
+    setTimeOffset(2);
+    setShowTimeDisplay(true);
+
+    // Close modals
+    setIsModalOpen(false);
+    setSelectedAircraft("");
+    setIsHelpModalOpen(false);
+    setIsCrewSquawkModalOpen(false);
+    setModalReg("");
+    setModalCrew("");
+    setModalSquawk("");
+    setIsTakeoffModalOpen(false);
+    setModalTakeoffReg("");
+    setModalTakeoffValue("");
+    setIsStartNumberModalOpen(false);
+    setStartNumber(1);
+    setCcAutocompleteOpenFor(null);
+  };
+
   const moveToVisualCircuitFromLocalIR = (reg: string) => {
-    setLocalIR(localIR.filter((r) => r !== reg));
-    setVisualCircuit([...visualCircuit, reg]);
-    // Do NOT delete localIRDetails here
+    moveAircraft(reg, 'localIR', 'visualCircuit', {
+      initializeNightLights: true,
+    });
   };
 
 const addAircraftToApron = () => {
@@ -440,76 +653,137 @@ const addAircraftToApron = () => {
   setNewReg(""); // Törölje az input mezőt
 };
 
-const moveToTaxiFromApron = (reg: string) => {
-  setApron(apron.filter((r) => r !== reg));
-  setTaxiing([...taxiing, reg]);
-  setTimestamps((prev) => {
-    const updatedTimestamps = { ...prev };
-    delete updatedTimestamps[reg]; // Reset timestamp when moving from Apron to Taxiing
-    return updatedTimestamps;
-  });
-};
+  const moveToTaxiFromApron = (reg: string) => {
+    moveAircraft(reg, 'apron', 'taxiing', { resetTimestamp: true });
+  };
 
-const moveBackToApron = (reg: string) => {
-  setTaxiing(taxiing.filter((r) => r !== reg));
-  setApron([...apron, reg]);
-  setTimestamps((prev) => {
-    const updatedTimestamps = { ...prev };
-    delete updatedTimestamps[reg]; // Reset timestamp when moving back to Apron
-    return updatedTimestamps;
-  });
-};
+  const moveBackToApron = (reg: string) => {
+    moveAircraft(reg, 'taxiing', 'apron', { resetTimestamp: true });
+  };
 
-const moveToTrainingBox = (reg: string, box: string) => {
-  setVisualCircuit(visualCircuit.filter((r) => r !== reg));
-  setTrainingBox({ ...trainingBox, [reg]: box });
-  setLocalIR(localIR.filter((r) => r !== reg)); // Hozzáadott sor: törli a gépet a Local IR-ből
-};
+  const moveToTrainingBox = (reg: string, box: string) => {
+    // Remove from multiple states
+    setVisualCircuit((prev) => prev.filter((r) => r !== reg));
+    setLocalIR((prev) => prev.filter((r) => r !== reg));
+    moveAircraft(reg, 'visualCircuit', 'trainingBox', { trainingBoxValue: box });
+  };
 
   const moveToLocalIR = (reg: string) => {
-    setVisualCircuit(visualCircuit.filter((r) => r !== reg));
-    setLocalIR([...localIR, reg]);
+    moveAircraft(reg, 'visualCircuit', 'localIR');
     if (!localIRDetails[reg]) {
-      const updated = { ...localIRDetails, [reg]: { procedure: "---", height: "", clearance: "" } };
+      const updated = { ...localIRDetails, [reg]: { procedure: '---', height: '', clearance: '' } };
       persistLocalIRDetails(updated);
     }
   };
 
-const moveToCrossCountry = (reg: string) => {
-  setTrainingBox((prev) => {
-    const copy = { ...prev };
-    delete copy[reg];
-    return copy;
-  });
-  setVisualCircuit((prev) => prev.filter((r) => r !== reg));
-  setLocalIR((prev) => prev.filter((r) => r !== reg));
-  setHoldingPoint((prev) => prev.filter((r) => r !== reg));
-  setTaxiing((prev) => prev.filter((r) => r !== reg));
-  setCrossCountry((prev) => [...prev, reg]);
-  setCrossCountryFrequency((prev) => ({ ...prev, [reg]: true })); // << EZ AZ ÚJ SOR
-};
-
-const moveToLocalIRFromCrossCountry = (reg: string) => {
-  setCrossCountry((prev) => prev.filter((r) => r !== reg)); // Eltávolítja a Cross Country állapotból
-  setLocalIR((prev) => [...prev, reg]); // Hozzáadja a Local IR állapothoz
-  if (!localIRDetails[reg]) {
-    const updated = { ...localIRDetails, [reg]: { procedure: "---", height: "", clearance: "" } };
-    persistLocalIRDetails(updated);
-  }
-};
-
-  const moveToVisualFromTrainingBox = (reg: string) => {
+  const moveToCrossCountry = (reg: string) => {
+    // Remove from all states
     setTrainingBox((prev) => {
       const copy = { ...prev };
       delete copy[reg];
       return copy;
     });
-    setVisualCircuit([...visualCircuit, reg]);
+    setVisualCircuit((prev) => prev.filter((r) => r !== reg));
+    setLocalIR((prev) => prev.filter((r) => r !== reg));
+    setHoldingPoint((prev) => prev.filter((r) => r !== reg));
+    setTaxiing((prev) => prev.filter((r) => r !== reg));
+    moveAircraft(reg, 'visualCircuit', 'crossCountry', { setCrossCountryFreq: true });
+  };
+
+  const moveToLocalIRFromCrossCountry = (reg: string) => {
+    moveAircraft(reg, 'crossCountry', 'localIR');
+    if (!localIRDetails[reg]) {
+      const updated = { ...localIRDetails, [reg]: { procedure: '---', height: '', clearance: '' } };
+      persistLocalIRDetails(updated);
+    }
+  };
+
+  const moveToVisualFromTrainingBox = (reg: string) => {
+    moveAircraft(reg, 'trainingBox', 'visualCircuit', {
+      initializeNightLights: true,
+    });
   };
 
   const moveToVisualFromCrossCountry = (reg: string) => {
-    setCrossCountry(crossCountry.filter((r) => r !== reg));
-    setVisualCircuit([...visualCircuit, reg]);
+    moveAircraft(reg, 'crossCountry', 'visualCircuit', {
+      initializeNightLights: true,
+    });
+  };
+
+  const removeAircraftCompletely = (reg: string) => {
+    pushUndoSnapshot();
+
+    // Remove from all locations (safe even if not present)
+    setTaxiing((prev) => prev.filter((r) => r !== reg));
+    setHoldingPoint((prev) => prev.filter((r) => r !== reg));
+    setVisualCircuit((prev) => prev.filter((r) => r !== reg));
+    setCrossCountry((prev) => prev.filter((r) => r !== reg));
+    setApron((prev) => prev.filter((r) => r !== reg));
+    setLocalIR((prev) => prev.filter((r) => r !== reg));
+
+    setTrainingBox((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+
+    // Clear per-aircraft data maps
+    setCrossCountryFrequency((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+    setCrossCountryProceedingTo((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+    // NOTE: timestamps/log idők maradjanak meg (kérésre), ezért nem töröljük őket itt
+    setTrainingBoxDetails((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+    setAircraftStatuses((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+    setAircraftTGStatus((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+    setEdgeLights((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+    setApproachLights((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+    setMisappState((prev) => {
+      const copy = { ...prev };
+      delete copy[reg];
+      return copy;
+    });
+
+    // Remove from localIR details store/state
+    if (localIRDetailsStore[reg]) {
+      delete localIRDetailsStore[reg];
+      setLocalIRDetails({ ...localIRDetailsStore });
+    }
+
+    // NOTE: logokat nem törlünk (kérésre), hogy a fel-/leszállási idők megmaradjanak
+
+    // Remove from foreign set (if present)
+    setForeignAircrafts((prev) => {
+      const next = new Set(prev);
+      next.delete(reg);
+      return next;
+    });
   };
 
   // Helper to persist localIRDetails to the store and state
@@ -546,6 +820,7 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
   };
 
   const moveLeft = (reg: string) => {
+    pushUndoSnapshot();
     const idx = visualCircuit.indexOf(reg);
     if (idx > 0) {
       const newVC = [...visualCircuit];
@@ -555,10 +830,11 @@ const moveToLocalIRFromCrossCountry = (reg: string) => {
   };
 
   const moveRight = (reg: string) => {
+    pushUndoSnapshot();
     const idx = visualCircuit.indexOf(reg);
     if (idx < visualCircuit.length - 1) {
       const newVC = [...visualCircuit];
-      [newVC[idx + 1], newVC[idx]] = [newVC[idx], newVC[idx + 1]];
+      [newVC[idx + 1], newVC[idx]] = [newVC[idx], newVC[idx + 1]]; // A sorrend megcserélve
       setVisualCircuit(newVC);
     }
   };
@@ -626,15 +902,164 @@ const saveTakeoffModal = () => {
 const [misappState, setMisappState] = useState<{ [reg: string]: number }>({});
 const misappStates = ["MISSED APP", "HOLDING", "OUTBOUND", "ON FINAL", "2/3 MILES"];
 
+  // --- Persistens app state (ne vesszen el refresh után) ---
+  const APP_STATE_KEY = "afis2.appState.v1";
+  const hasLoadedAppStateRef = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(APP_STATE_KEY);
+      if (!raw) {
+        hasLoadedAppStateRef.current = true;
+        return;
+      }
+      const parsed = JSON.parse(raw) as any;
+      if (!parsed || typeof parsed !== "object") {
+        hasLoadedAppStateRef.current = true;
+        return;
+      }
+
+      if (Array.isArray(parsed.taxiing)) setTaxiing(parsed.taxiing);
+      if (Array.isArray(parsed.holdingPoint)) setHoldingPoint(parsed.holdingPoint);
+      if (Array.isArray(parsed.visualCircuit)) setVisualCircuit(parsed.visualCircuit);
+      if (parsed.trainingBox && typeof parsed.trainingBox === "object") setTrainingBox(parsed.trainingBox);
+      if (Array.isArray(parsed.crossCountry)) setCrossCountry(parsed.crossCountry);
+      if (Array.isArray(parsed.apron)) setApron(parsed.apron);
+      if (Array.isArray(parsed.localIR)) setLocalIR(parsed.localIR);
+
+      if (parsed.localIRDetails && typeof parsed.localIRDetails === "object") {
+        Object.assign(localIRDetailsStore, parsed.localIRDetails);
+        setLocalIRDetails({ ...localIRDetailsStore });
+      }
+
+      if (parsed.crossCountryFrequency && typeof parsed.crossCountryFrequency === "object") {
+        setCrossCountryFrequency(parsed.crossCountryFrequency);
+      }
+      if (parsed.timestamps && typeof parsed.timestamps === "object") setTimestamps(parsed.timestamps);
+      if (parsed.trainingBoxDetails && typeof parsed.trainingBoxDetails === "object") setTrainingBoxDetails(parsed.trainingBoxDetails);
+      if (typeof parsed.showTable === "boolean") setShowTable(parsed.showTable);
+      if (typeof parsed.startNumber === "number" && parsed.startNumber > 0) setStartNumber(parsed.startNumber);
+
+      if (Array.isArray(parsed.detailedFlightLog)) setDetailedFlightLog(parsed.detailedFlightLog);
+      if (parsed.aircraftStatuses && typeof parsed.aircraftStatuses === "object") setAircraftStatuses(parsed.aircraftStatuses);
+      if (parsed.aircraftTGStatus && typeof parsed.aircraftTGStatus === "object") setAircraftTGStatus(parsed.aircraftTGStatus);
+      if (Array.isArray(parsed.foreignAircrafts)) setForeignAircrafts(new Set(parsed.foreignAircrafts));
+
+      if (parsed.airspaceStatuses && typeof parsed.airspaceStatuses === "object") setAirspaceStatuses(parsed.airspaceStatuses);
+      if (typeof parsed.isNightMode === "boolean") setIsNightMode(parsed.isNightMode);
+      if (parsed.edgeLights && typeof parsed.edgeLights === "object") setEdgeLights(parsed.edgeLights);
+      if (parsed.approachLights && typeof parsed.approachLights === "object") setApproachLights(parsed.approachLights);
+
+      if (typeof parsed.qnh === "number") setQnh(parsed.qnh);
+      if (typeof parsed.timeOffset === "number") setTimeOffset(parsed.timeOffset);
+      if (typeof parsed.showTimeDisplay === "boolean") setShowTimeDisplay(parsed.showTimeDisplay);
+
+      if (parsed.crossCountryProceedingTo && typeof parsed.crossCountryProceedingTo === "object") {
+        setCrossCountryProceedingTo(parsed.crossCountryProceedingTo);
+      }
+      if (parsed.destinationUsage && typeof parsed.destinationUsage === "object") {
+        setDestinationUsage(parsed.destinationUsage);
+      }
+      if (parsed.misappState && typeof parsed.misappState === "object") {
+        setMisappState(parsed.misappState);
+      }
+
+      hasLoadedAppStateRef.current = true;
+    } catch {
+      hasLoadedAppStateRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedAppStateRef.current) return;
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(() => {
+      try {
+        const payload = {
+          taxiing,
+          holdingPoint,
+          visualCircuit,
+          trainingBox,
+          crossCountry,
+          apron,
+          localIR,
+          localIRDetails: localIRDetailsStore,
+          crossCountryFrequency,
+          timestamps,
+          trainingBoxDetails,
+          showTable,
+          startNumber,
+          detailedFlightLog,
+          aircraftStatuses,
+          aircraftTGStatus,
+          foreignAircrafts: Array.from(foreignAircrafts),
+          airspaceStatuses,
+          isNightMode,
+          edgeLights,
+          approachLights,
+          qnh,
+          timeOffset,
+          showTimeDisplay,
+          crossCountryProceedingTo,
+          destinationUsage,
+          misappState,
+        };
+        localStorage.setItem(APP_STATE_KEY, JSON.stringify(payload));
+      } catch {
+        // ignore
+      }
+    }, 200);
+
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    };
+  }, [
+    taxiing,
+    holdingPoint,
+    visualCircuit,
+    trainingBox,
+    crossCountry,
+    apron,
+    localIR,
+    localIRDetails,
+    crossCountryFrequency,
+    timestamps,
+    trainingBoxDetails,
+    showTable,
+    startNumber,
+    detailedFlightLog,
+    aircraftStatuses,
+    aircraftTGStatus,
+    foreignAircrafts,
+    airspaceStatuses,
+    isNightMode,
+    edgeLights,
+    approachLights,
+    qnh,
+    timeOffset,
+    showTimeDisplay,
+    crossCountryProceedingTo,
+    destinationUsage,
+    misappState,
+  ]);
+
 const renderAircraft = (
   regs: string[],
-  actions: Array<{ label: string; onClick: (reg: string) => void }>,
+  actions:
+    | Array<{ label: string; onClick: (reg: string) => void }>
+    | ((reg: string) => Array<{ label: string; onClick: (reg: string) => void }>),
   pulsing: boolean = false,
   extraContent?: (reg: string, index?: number) => React.ReactNode,
   isCrossCountry: boolean = false
 ) => (
   <div className="container" style={styles.container}>
     {regs.map((reg, index) => {
+      const resolvedActions = typeof actions === "function" ? actions(reg) : actions;
       // Determine the "On Frequency" status and default if not set
       const onFreq = crossCountryFrequency[reg] ?? true; // Default to true
 
@@ -712,6 +1137,48 @@ const renderAircraft = (
             </button>
           </div>
 		  
+          {isNightMode && regs === visualCircuit && (
+            <div style={{ display: "flex", gap: "5px", marginBottom: "10px" }}>
+              <button
+                onClick={() => setEdgeLights(prev => ({
+                  ...prev,
+                  [reg]: !prev[reg]
+                }))}
+                style={{
+                  padding: `${4 * scale}px`,
+                  backgroundColor: edgeLights[reg] ? 'green' : 'red',
+                  color: 'white',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: `${16 * scale}px`,
+                  flex: 1
+                }}
+              >
+                Edge Light
+              </button>
+              <button
+                onClick={() => setApproachLights(prev => ({
+                  ...prev,
+                  [reg]: !prev[reg]
+                }))}
+                style={{
+                  padding: `${4 * scale}px`,
+                  backgroundColor: approachLights[reg] ? 'green' : 'red',
+                  color: 'white',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: `${16 * scale}px`,
+                  flex: 1
+                }}
+              >
+                Approach Light
+              </button>
+            </div>
+          )}
 
           {isCrossCountry && (
             <div style={{ marginBottom: `${10 * scale}px` }}>
@@ -760,7 +1227,7 @@ const renderAircraft = (
         borderRadius: `${6 * scale}px`,
         color: "black",
         marginBottom: `${8 * scale}px`,
-        fontSize: `${16 * scale}px`, // Increased font size
+        fontSize: `${20 * scale}px`, // Increased font size
         width: `calc(100% - ${12 * scale}px)`, // Mindkét oldalra 6px margó
         marginLeft: `${6 * scale}px`,
         marginRight: `${6 * scale}px`,
@@ -785,9 +1252,20 @@ const renderAircraft = (
               <input
                 type="text"
                 value={localIRDetails[reg]?.height || ""}
-                onChange={(e) => handleLocalIRChange(reg, 'height', e.target.value)}
+                onChange={(e) => handleLocalIRChange(reg, 'height', e.target.value.toUpperCase())}
                 placeholder="Additional remark"
-                style={{ padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, color: 'black', marginBottom: `${8 * scale}px`, fontSize: `${16 * scale}px` }}
+                style={{ 
+                  padding: `${6 * scale}px`, 
+                  borderRadius: `${6 * scale}px`, 
+                  color: 'black', 
+                  marginBottom: `${8 * scale}px`, 
+                  fontSize: `${20 * scale}px`,
+                  textTransform: 'uppercase'
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  target.value = target.value.toUpperCase();
+                }}
               />
               {/* MISAPP/HOLDING/OUTBOUND/ON FINAL/3 MILES button */}
               {["RNP Z", "RNP Y", "VOR", "BOR", "NDB", "VOR TEMPO", "NDB NCS"].includes(localIRDetails[reg]?.procedure) && (
@@ -819,8 +1297,8 @@ const renderAircraft = (
 
           {extraContent && extraContent(reg, index)}
 
-          {/* Take-off és Landed idő kijelzése */}
-          {timestamps[reg]?.takeoff && (
+          {/* Take-off és Landed idő kijelzése - csak akkor jelenik meg, ha a kapcsoló be van kapcsolva */}
+          {showTimeDisplay && timestamps[reg]?.takeoff && (
             <div
               style={{
                 fontSize: `${14 * scale}px`,
@@ -840,7 +1318,7 @@ const renderAircraft = (
               Take-off: {getOffsetTime(timestamps[reg].takeoff)}
             </div>
           )}
-          {timestamps[reg]?.landed && (
+          {showTimeDisplay && timestamps[reg]?.landed && (
             <div style={{
               fontSize: `${14 * scale}px`,
               color: "white",
@@ -861,7 +1339,7 @@ const renderAircraft = (
   gap: `${6 * scale}px`, // Távolság a gombok között
   marginTop: `${10 * scale}px`
 }}>
-  {actions.map(({ label, onClick }, index) => (
+  {resolvedActions.map(({ label, onClick }, index) => (
     <button
       key={label}
       style={{
@@ -877,7 +1355,7 @@ const renderAircraft = (
         border: "none",
         cursor: "pointer",
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        gridColumn: actions.length === 1 || actions.length % 2 !== 0 && index === actions.length - 1 ? "span 2" : undefined, // Ha egy gomb van, vagy utolsó gomb páratlan számban, töltsön ki két oszlopot
+        gridColumn: resolvedActions.length === 1 || resolvedActions.length % 2 !== 0 && index === resolvedActions.length - 1 ? "span 2" : undefined, // Ha egy gomb van, vagy utolsó gomb páratlan számban, töltsön ki két oszlopot
       }}
       onClick={() => onClick(reg)}
     >
@@ -891,8 +1369,16 @@ const renderAircraft = (
   </div>
 );
 
+const getAircraftGroup = (reg: string) => {
+  const piperAircraft = ["BAK", "BED", "BJA", "BEC", "BEY","BEZ","BFE","BIY","BJC","BJD","TUP","TUQ","TUR"];
+  const cessnaAircraft = ["SUK", "SKV", "SJK", "BAF", "SLW","PPL"];
+  const multiAircraft = ["BFJ", "BFI"];
 
-
+  if (piperAircraft.includes(reg)) return "Piper";
+  if (cessnaAircraft.includes(reg)) return "Cessna";
+  if (multiAircraft.includes(reg)) return "Multi";
+  return "Other";
+};
 
   return (
     <>
@@ -949,16 +1435,16 @@ const renderAircraft = (
     </div>
   </div>
   <p><strong>Adjust sizes with the slider. All data is lost after refreshing the page!</strong></p>
-  <div style={{ display: "flex", alignItems: "center", gap: "24px", marginTop: "10px", justifyContent: "space-between" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "10px", justifyContent: "space-between" }}>
     {/* Reset/Help buttons left */}
-    <div style={{ display: "flex", gap: "10px" }}>
+    <div style={{ display: "flex", gap: "6px" }}>
       <button
         style={{
-          padding: "10px 20px",
-          fontSize: "16px",
+          padding: "6px 12px",
+          fontSize: "14px",
           backgroundColor: "#007BFF",
           color: "white",
-          borderRadius: "8px",
+          borderRadius: "6px",
           border: "none",
           cursor: "pointer",
         }}
@@ -968,11 +1454,27 @@ const renderAircraft = (
       </button>
       <button
         style={{
-          padding: "10px 20px",
-          fontSize: "16px",
+          padding: "6px 12px",
+          fontSize: "14px",
+          backgroundColor: "#ff9800",
+          color: "black",
+          borderRadius: "6px",
+          border: "none",
+          cursor: "pointer",
+          fontWeight: 700,
+        }}
+        onClick={resetForNewDay}
+        title="Clear all data and start a new day"
+      >
+        New day (reset)
+      </button>
+      <button
+        style={{
+          padding: "6px 12px",
+          fontSize: "14px",
           backgroundColor: "#28a745",
           color: "white",
-          borderRadius: "8px",
+          borderRadius: "6px",
           border: "none",
           cursor: "pointer",
         }}
@@ -980,9 +1482,64 @@ const renderAircraft = (
       >
         Help
       </button>
+      <button
+        style={{
+          padding: "6px 14px",
+          fontSize: "14px",
+          letterSpacing: "0.3px",
+          backgroundColor: undoStackRef.current.length > 0 ? "#ff3b3b" : "#555",
+          color: "white",
+          borderRadius: "6px",
+          border: undoStackRef.current.length > 0 ? "2px solid rgba(255,255,255,0.65)" : "2px solid rgba(255,255,255,0.2)",
+          cursor: undoStackRef.current.length > 0 ? "pointer" : "not-allowed",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          boxShadow: undoStackRef.current.length > 0
+            ? "0 4px 12px rgba(255, 0, 0, 0.3), 0 0 0 2px rgba(255, 59, 59, 0.2)"
+            : "none",
+          transform: undoStackRef.current.length > 0 ? "translateY(-1px)" : "none",
+        }}
+        onClick={() => {
+          if (undoStackRef.current.length === 0) return;
+          undoLastAction();
+        }}
+        title="Undo last action"
+      >
+        UNDO LAST ACTION
+      </button>
+
     </div>
-    {/* QNH right aligned */}
+    {/* QNH and Airspace section */}
     <div style={{ display: "flex", alignItems: "center", gap: "16px", marginLeft: "auto" }}>
+      {/* Dinamikusan generált légterek gombjai - a config/airspace.ts fájlból */}
+      {AIRSPACES.map((airspace: Airspace) => (
+        <button
+          key={airspace.id}
+          style={{
+            padding: "8px 16px",
+            fontSize: "16px",
+            borderRadius: "8px",
+            border: "none",
+            background: airspaceStatuses[airspace.id] ? "#28a745" : "#dc3545",
+            color: "white",
+            fontWeight: "bold",
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            minWidth: "120px"
+          }}
+          onClick={() => setAirspaceStatuses((prev) => ({
+            ...(pushUndoSnapshot(), {}),
+            ...prev,
+            [airspace.id]: !prev[airspace.id]
+          }))}
+        >
+          <span style={{ marginBottom: "4px" }}>{airspace.displayName}</span>
+          <span>{airspaceStatuses[airspace.id] ? "ACTIVE" : "NOT ACTIVE"}</span>
+        </button>
+      ))}
+
       <span style={{ fontWeight: "bold", fontSize: "32px", letterSpacing: "2px" }}>QNH</span>
       <button
         style={{
@@ -996,7 +1553,10 @@ const renderAircraft = (
           cursor: "pointer",
           outline: "none",
         }}
-        onClick={() => setQnh(q => Math.max(900, Number(q) - 1))}
+        onClick={() => {
+          pushUndoSnapshot();
+          setQnh(q => Math.max(900, Number(q) - 1));
+        }}
         tabIndex={-1}
       >-</button>
       <input
@@ -1039,9 +1599,58 @@ const renderAircraft = (
           cursor: "pointer",
           outline: "none",
         }}
-        onClick={() => setQnh(q => Math.min(1100, Number(q) + 1))}
+        onClick={() => {
+          pushUndoSnapshot();
+          setQnh(q => Math.min(1100, Number(q) + 1));
+        }}
         tabIndex={-1}
       >+</button>
+      <button
+        style={{
+          padding: "8px 16px",
+          fontSize: "16px",
+          borderRadius: "8px",
+          border: "none",
+          background: isNightMode ? "#28a745" : "#dc3545",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          minWidth: "120px"
+        }}
+        onClick={() => {
+          pushUndoSnapshot();
+          setIsNightMode(!isNightMode);
+        }}
+      >
+        <span style={{ marginBottom: "4px" }}>NIGHT MODE</span>
+        <span>{isNightMode ? "ON" : "OFF"}</span>
+      </button>
+      <button
+        style={{
+          padding: "8px 16px",
+          fontSize: "16px",
+          borderRadius: "8px",
+          border: "none",
+          background: showTimeDisplay ? "#28a745" : "#dc3545",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          minWidth: "120px"
+        }}
+        onClick={() => {
+          pushUndoSnapshot();
+          setShowTimeDisplay(!showTimeDisplay);
+        }}
+      >
+        <span style={{ marginBottom: "4px" }}>DISPLAY T.O. TIME</span>
+        <span>{showTimeDisplay ? "ON" : "OFF"}</span>
+      </button>
     </div>
   </div>
 </Section>
@@ -1068,17 +1677,126 @@ const renderAircraft = (
 }>
   {renderAircraft(
     crossCountry,
-    [
-      { label: "Join VC", onClick: (reg) => moveToVisualFromCrossCountry(reg) },
-      { label: "Approach", onClick: (reg) => moveToLocalIRFromCrossCountry(reg) },
-      { label: "Vacated", onClick: (reg) => moveToTaxiingFromCrossCountry(reg) }
-    ],
+    (reg) => {
+      const base = [
+        { label: "Join VC", onClick: (r: string) => moveToVisualFromCrossCountry(r) },
+        { label: "Approach", onClick: (r: string) => moveToLocalIRFromCrossCountry(r) },
+        { label: "Vacated", onClick: (r: string) => moveToTaxiingFromCrossCountry(r) },
+      ];
+      if (foreignAircrafts.has(reg)) {
+        base.push({ label: "Remove", onClick: (r: string) => removeAircraftCompletely(r) });
+      }
+      return base;
+    },
     false,
     (reg) => (
-      <textarea
-        style={{ marginTop: `${8 * scale}px`, padding: `${6 * scale}px`, borderRadius: `${6 * scale}px`, color: "black", fontSize: `${16 * scale}px` }}
-        placeholder="Proceeding to..."
-      />
+      <div style={{ position: "relative", marginTop: `${8 * scale}px` }}>
+        <textarea
+          style={{
+            padding: `${6 * scale}px`,
+            borderRadius: `${6 * scale}px`,
+            color: "black",
+            fontSize: `${20 * scale}px`,
+            textTransform: "uppercase",
+            width: "100%",
+            boxSizing: "border-box",
+          }}
+          placeholder="Proceeding to..."
+          value={crossCountryProceedingTo[reg] || ""}
+          onChange={(e) => {
+            const val = e.target.value.toUpperCase();
+            setCrossCountryProceedingTo((prev) => ({ ...prev, [reg]: val }));
+          }}
+          onFocus={(e) => {
+            setCcAutocompleteOpenFor(reg);
+            // Kijelöli az egész szöveget amikor fókuszba kerül
+            e.target.select();
+          }}
+          onBlur={() => {
+            // kis késleltetés, hogy kattintás (onMouseDown) még lefusson
+            setTimeout(() => {
+              setCcAutocompleteOpenFor((cur) => (cur === reg ? null : cur));
+            }, 120);
+          }}
+        />
+
+        {ccAutocompleteOpenFor === reg &&
+          (crossCountryProceedingTo[reg] || "").trim().length > 0 && (() => {
+            const query = (crossCountryProceedingTo[reg] || "").trim().toUpperCase();
+            const suggestions = CROSS_COUNTRY_DESTINATIONS
+              .filter((city) => city.toUpperCase().includes(query))
+              .sort((a, b) => {
+                const au = a.toUpperCase();
+                const bu = b.toUpperCase();
+
+                // 1) elsődlegesen: melyik kezdete hasonlít jobban (prefix előre)
+                const aPrefix = au.startsWith(query) ? 1 : 0;
+                const bPrefix = bu.startsWith(query) ? 1 : 0;
+                if (bPrefix !== aPrefix) return bPrefix - aPrefix;
+
+                // 2) másodlagosan: használati gyakoriság
+                const ac = destinationUsage[au] || 0;
+                const bc = destinationUsage[bu] || 0;
+                if (bc !== ac) return bc - ac;
+
+                // 3) végül: név szerint
+                return a.localeCompare(b, "hu");
+              })
+              .slice(0, 10);
+
+            if (suggestions.length === 0) return null;
+
+            return (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  zIndex: 50,
+                  marginTop: `${4 * scale}px`,
+                  backgroundColor: "#111",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  borderRadius: `${6 * scale}px`,
+                  overflow: "hidden",
+                  boxShadow: "0 10px 20px rgba(0,0,0,0.35)",
+                  maxHeight: `${220 * scale}px`,
+                  overflowY: "auto",
+                  // legyen olyan széles, hogy minden kiférjen (ha kell, szélesebb a textarea-nál)
+                  width: "max-content",
+                  minWidth: "100%",
+                  maxWidth: "90vw",
+                  whiteSpace: "nowrap",
+                  overflowX: "auto",
+                }}
+              >
+                {suggestions.map((city) => (
+                  <div
+                    key={city}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const picked = city.toUpperCase();
+                      setCrossCountryProceedingTo((prev) => ({ ...prev, [reg]: picked }));
+                      setDestinationUsage((prev) => ({
+                        ...prev,
+                        [picked]: (prev[picked] || 0) + 1,
+                      }));
+                      setCcAutocompleteOpenFor(null);
+                    }}
+                    style={{
+                      padding: `${8 * scale}px`,
+                      cursor: "pointer",
+                      fontSize: `${18 * scale}px`,
+                      borderBottom: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    {city}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+      </div>
     ),
     true
   )}
@@ -1297,15 +2015,38 @@ const renderAircraft = (
     minWidth: "300px", // Minimum szélesség
   }}
 />
-  {renderAircraft(
-    [...apron]
-      .filter((reg) => reg.includes(searchTerm)) // Szűrés a keresési feltétel alapján
-      .sort((a, b) => a.localeCompare(b)), // Sort the array alphabetically
-    [
-      { label: "Holding Point", onClick: moveToHoldingPointFromApron },
-	  { label: "Taxi", onClick: moveToTaxiFromApron },
-    ]
-  )}
+  {/* Group headers */}
+  {["Piper", "Cessna", "Multi", "Other"].map(groupName => {
+    const groupAircraft = [...apron]
+      .filter(reg => reg.includes(searchTerm))
+      .filter(reg => getAircraftGroup(reg) === groupName)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (groupAircraft.length === 0) return null;
+
+    return (
+      <div key={groupName} style={{ marginBottom: "20px" }}>
+        <h3 style={{ 
+          color: "white", 
+          borderBottom: "2px solid white",
+          paddingBottom: "5px",
+          marginBottom: "10px" 
+        }}>
+          {groupName}
+        </h3>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+          {renderAircraft(
+            groupAircraft,
+            [
+              { label: "Holding Point", onClick: moveToHoldingPointFromApron },
+              { label: "Taxi", onClick: moveToTaxiFromApron },
+            ]
+          )}
+        </div>
+      </div>
+    );
+  })}
+
   <div className="flex gap-2" style={{ marginTop: "10px" }}>
     <input
       type="text"
@@ -1380,7 +2121,7 @@ const renderAircraft = (
     // Állapot a felugró ablakhoz
     const [deleteRowIndex, setDeleteRowIndex] = useState<{ tableIndex: number; rowIndex: number } | null>(null);
 
-    const handleAddRow = (tableIndex: number, rowIndex: number) => {
+    const handleAddRow = (tableIndex: number, rowIndex: number, position: 'above' | 'below') => {
       const newEntry = {
         serial: detailedFlightLog.length + 1,
         reg: "",
@@ -1391,7 +2132,8 @@ const renderAircraft = (
         isNew: true,
       };
       const updatedLog = [...detailedFlightLog];
-      updatedLog.splice(tableIndex * 33 + rowIndex, 0, newEntry);
+      const insertIndex = tableIndex * 33 + rowIndex + (position === 'below' ? 1 : 0);
+      updatedLog.splice(insertIndex, 0, newEntry);
       setDetailedFlightLog(
         updatedLog.map((entry, idx) => ({ ...entry, serial: idx + 1 }))
       );
@@ -1590,7 +2332,7 @@ const renderAircraft = (
                       }}
                     >
                       <button
-                        onClick={() => handleAddRow(tableIndex, rowIndex)}
+                        onClick={() => handleAddRow(tableIndex, rowIndex, 'above')}
                         style={{
                           padding: "5px 10px",
                           backgroundColor: "green",
@@ -1598,9 +2340,26 @@ const renderAircraft = (
                           borderRadius: "4px",
                           border: "none",
                           cursor: "pointer",
+                          fontSize: "12px",
                         }}
+                        title="Add row above"
                       >
-                        +
+                        ↑ Add row above
+                      </button>
+                      <button
+                        onClick={() => handleAddRow(tableIndex, rowIndex, 'below')}
+                        style={{
+                          padding: "5px 10px",
+                          backgroundColor: "green",
+                          color: "white",
+                          borderRadius: "4px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                        }}
+                        title="Add row below"
+                      >
+                        ↓ Add row below
                       </button>
                       <button
                         onClick={() => setDeleteRowIndex({ tableIndex, rowIndex })}
@@ -1611,9 +2370,10 @@ const renderAircraft = (
                           borderRadius: "4px",
                           border: "none",
                           cursor: "pointer",
+                          fontSize: "12px",
                         }}
                       >
-                        🗑
+                        🗑 Delete
                       </button>
                     </div>
                   </td>
@@ -1993,13 +2753,50 @@ The AFIS Log summarizes the day’s operations by listing the first takeoff and 
           }}>
             <h3 style={{ fontSize: "20px", marginBottom: "16px" }}>Choose TB for {selectedAircraft}:</h3>
             {["1", "2", "3", "4", "5", "6","7", "5-6","1-2","2-3","1-2-3", "100","TO VC","TO DOWNWIND","TO BASE","TO O.T.", "TO FINAL","TO CROSSWIND"].map((box) => (
+              (() => {
+                const getBoxParts = (b: string): string[] => {
+                  // Csak a számozott TB-khez csinálunk átfedés-ellenőrzést.
+                  // Példák: "1", "1-2", "2-3", "1-2-3", "5-6", "100"
+                  // Nem példák: "TO VC", "TO DOWNWIND", stb. -> []
+                  const trimmed = b.trim().toUpperCase();
+                  const numericLike = trimmed.match(/^\d+(-\d+)*$/);
+                  if (!numericLike) return [];
+                  return trimmed.split("-").filter(Boolean);
+                };
+
+                const targetParts = getBoxParts(box);
+                const overlaps = (a: string[], b: string[]) =>
+                  a.length > 0 && b.length > 0 && a.some((x) => b.includes(x));
+
+                const occupiedBy = Object.entries(trainingBox).find(([reg, assigned]) => {
+                  if (reg === selectedAircraft) return false;
+                  const assignedParts = getBoxParts(assigned);
+                  // Ha bármelyik oldalon nem számozott TB van, ne tekintsük ütközésnek
+                  // (ezek "útvonal" jellegű TB-k).
+                  return overlaps(targetParts, assignedParts);
+                })?.[0];
+
+                const isOccupied = Boolean(occupiedBy);
+                return (
               <button
                 key={box}
                 onClick={() => handleTrainingBoxSelection(box)}
-                style={{ margin: "6px", padding: "10px 20px", fontSize: "16px", backgroundColor: "#007BFF", color: "white", borderRadius: "8px", border: "none", cursor: "pointer" }}
+                style={{ 
+                  margin: "6px", 
+                  padding: "10px 20px", 
+                  fontSize: "16px", 
+                  backgroundColor: isOccupied ? "#dc3545" : "#007BFF", 
+                  color: "white", 
+                  borderRadius: "8px", 
+                  border: isOccupied ? "2px solid rgba(255,255,255,0.6)" : "none", 
+                  cursor: "pointer" 
+                }}
+                title={isOccupied ? `Occupied by ${occupiedBy}` : undefined}
               >
                 TB {box}
               </button>
+                );
+              })()
             ))}
             <div>
               <button
@@ -2221,5 +3018,3 @@ const Section: React.FC<{
 );
 
 export default AfisProgram;
-
-
