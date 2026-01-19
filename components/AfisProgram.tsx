@@ -1424,7 +1424,7 @@ const getAircraftGroup = (reg: string) => {
   <h2>Size:</h2>
   <input
     type="range"
-    style={{ width: '600px' }} // Fix szélesség, nem hat a skála
+    style={{ width: '150px' }} // Fix szélesség, nem hat a skála
     min="0.5" // 10%-nak megfelelő alsó érték
     max="1.2" // 110%-nak megfelelő felső érték
     step="0.001" // Nagyon finom lépések
@@ -1446,7 +1446,7 @@ const getAircraftGroup = (reg: string) => {
 </div>
     </div>
   </div>
-  <p><strong>Data is now stored, even after restarting the computer! Start the day with the reset button. Also you can undo the last 50 actions you made. Arriving foreign ACFT also working now, and you can remove them after added.</strong></p>
+  <p><strong>Changelog: Data is now stored, even after restarting the computer! Start the day with the reset button. Also you can undo the last 50 actions you made. Arriving foreign ACFT working now, and you can remove them after added.</strong></p>
   <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "10px", justifyContent: "space-between" }}>
     {/* Reset/Help buttons left */}
     <div style={{ display: "flex", gap: "6px" }}>
