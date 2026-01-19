@@ -58,6 +58,9 @@ const AfisProgram = () => {
   const [crossCountryProceedingTo, setCrossCountryProceedingTo] = useState<{ [reg: string]: string }>({});
   const [ccAutocompleteOpenFor, setCcAutocompleteOpenFor] = useState<string | null>(null);
   const [destinationUsage, setDestinationUsage] = useState<{ [destination: string]: number }>({});
+  const [actionLog, setActionLog] = useState<number[]>([]); // Timestamp-ek (UTC ms), majd timeOffset-tel korrigáljuk
+  const [hoveredWorkloadPoint, setHoveredWorkloadPoint] = useState<number | null>(null); // Hover state a workload grafikonhoz
+  const [workloadIntervalMinutes, setWorkloadIntervalMinutes] = useState<number>(10); // Átlagolási intervallum percekben (5, 10, 15, 30)
 
   // Persistens "Proceeding to" használati statisztika (localStorage)
   useEffect(() => {
@@ -314,6 +317,12 @@ const AfisProgram = () => {
     }
   ) => {
     pushUndoSnapshot();
+    // Log action for workload tracking (UTC timestamp, majd timeOffset-tel korrigáljuk)
+    try {
+      setActionLog((prev) => [...prev, Date.now()]);
+    } catch (e) {
+      // ignore errors in logging
+    }
     // Remove from source
     const stateSetters: Record<string, any> = {
       apron: setApron,
@@ -616,6 +625,9 @@ const resetSizes = () => {
     setQnh(1013);
     setTimeOffset(2);
     setShowTimeDisplay(true);
+    
+    // Reset workload log
+    setActionLog([]);
 
     // Close modals
     setIsModalOpen(false);
@@ -2651,6 +2663,311 @@ const getAircraftGroup = (reg: string) => {
       </table>
     </>
   )}
+</Section>
+
+<Section title={
+  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', justifyContent: 'space-between', width: '100%' }}>
+    <span>Workload Monitor (07:00-22:00)</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span style={{ fontSize: '14px', color: 'white' }}>Interval:</span>
+      {[5, 10, 15, 30].map((mins) => (
+        <button
+          key={mins}
+          onClick={() => setWorkloadIntervalMinutes(mins)}
+          style={{
+            padding: '4px 12px',
+            fontSize: '13px',
+            backgroundColor: workloadIntervalMinutes === mins ? '#28a745' : '#555',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: workloadIntervalMinutes === mins ? 'bold' : 'normal',
+          }}
+        >
+          {mins} min
+        </button>
+      ))}
+    </div>
+  </div>
+} noMinHeight>
+  {(() => {
+    try {
+      if (!actionLog || !Array.isArray(actionLog) || actionLog.length === 0) {
+        return <div style={{ color: 'white', padding: '20px', textAlign: 'center' }}>No actions recorded yet</div>;
+      }
+
+      // Dinamikus intervallumok 07:00-22:00 között (választható percekben)
+      const intervals: { time: string; count: number }[] = [];
+      const startHour = 7;
+      const endHour = 22;
+      const intervalMinutes = workloadIntervalMinutes;
+      
+      for (let h = startHour; h < endHour; h++) {
+        for (let m = 0; m < 60; m += intervalMinutes) {
+          intervals.push({ time: `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`, count: 0 });
+        }
+      }
+
+      // Számolás: UTC timestamp -> helyi idő (timeOffset-tel korrigálva)
+      actionLog.forEach((utcTimestamp) => {
+        try {
+          const date = new Date(utcTimestamp);
+          if (isNaN(date.getTime())) return;
+          const localHour = date.getUTCHours() + timeOffset;
+          const localMinute = date.getUTCMinutes();
+          
+          // Csak 07:00-22:00 közötti actionöket számoljuk
+          if (localHour >= startHour && localHour < endHour) {
+            const roundedMinute = Math.floor(localMinute / intervalMinutes) * intervalMinutes;
+            const timeStr = `${localHour.toString().padStart(2, '0')}:${roundedMinute.toString().padStart(2, '0')}`;
+            const interval = intervals.find((i) => i.time === timeStr);
+            if (interval) {
+              interval.count++;
+            }
+          }
+        } catch (e) {
+          // skip invalid timestamp
+        }
+      });
+
+      const counts = intervals.map((i) => i.count);
+      const maxCount = counts.length > 0 ? Math.max(...counts, 1) : 1;
+      const nonZeroCounts = counts.filter((c) => c > 0);
+      const minCount = nonZeroCounts.length > 0 ? Math.min(...nonZeroCounts) : 0;
+      const countRange = maxCount - minCount || 1;
+
+      // SVG vonaldiagram - responsive szélesség
+      const containerWidth = typeof window !== 'undefined' ? window.innerWidth - 100 : 1200; // Teljes szélesség mínusz padding
+      const width = Math.max(containerWidth, 800); // Minimum 800px
+      const height = 300;
+      const padding = { top: 40, right: 40, bottom: 60, left: 60 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+      const stepX = chartWidth / intervals.length;
+
+      // Pontok számítása - Y tengelyen az actionök száma alapján emelkedik (0-tól maxCount-ig)
+      const points: Array<{ x: number; y: number; count: number; time: string }> = intervals.map((interval, idx) => {
+        const x = padding.left + idx * stepX + stepX / 2;
+        // Y pozíció: alulról felfelé, az actionök száma alapján
+        // Ha count = 0, akkor a legalsó pozícióban (padding.top + chartHeight)
+        // Ha count = maxCount, akkor a legfelső pozícióban (padding.top)
+        // 0-tól maxCount-ig normalizálunk
+        const normalizedCount = maxCount > 0 ? interval.count / maxCount : 0;
+        const y = padding.top + chartHeight - (normalizedCount * chartHeight);
+        return { x, y, count: interval.count, time: interval.time };
+      });
+
+      // Path string a vonalhoz - smooth curve (cubic bezier)
+      let pathData = '';
+      if (points.length === 0) {
+        pathData = '';
+      } else if (points.length === 1) {
+        pathData = `M ${points[0].x} ${points[0].y}`;
+      } else {
+        let path = `M ${points[0].x} ${points[0].y}`;
+        
+        // Smooth curve generálása control point-okkal
+        for (let i = 1; i < points.length; i++) {
+          const prev = points[i - 1];
+          const curr = points[i];
+          const next = points[i + 1];
+          
+          if (i === 1) {
+            // Első görbe: kezdőponttól első control point-ig
+            const cp1x = prev.x + (curr.x - prev.x) / 3;
+            const cp1y = prev.y;
+            const cp2x = curr.x - (next ? (next.x - curr.x) / 3 : (curr.x - prev.x) / 3);
+            const cp2y = curr.y;
+            path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+          } else if (next) {
+            // Köztes görbék: smooth curve
+            const smoothCp2x = curr.x - (next.x - curr.x) / 2;
+            const smoothCp2y = curr.y;
+            path += ` S ${smoothCp2x} ${smoothCp2y}, ${curr.x} ${curr.y}`;
+          } else {
+            // Utolsó görbe
+            path += ` S ${curr.x} ${prev.y}, ${curr.x} ${curr.y}`;
+          }
+        }
+        
+        pathData = path;
+      }
+
+      // Szín számítás (zöld -> piros)
+      const getColor = (count: number): string => {
+        if (count === 0) return '#28a745'; // zöld
+        const ratio = (count - minCount) / countRange;
+        const r = Math.round(255 * ratio);
+        const g = Math.round(255 * (1 - ratio));
+        return `rgb(${r}, ${g}, 0)`;
+      };
+
+      return (
+        <div style={{ width: '100%', marginTop: '20px' }}>
+          <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px', display: 'block' }}>
+            {/* Grid lines */}
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+              const y = padding.top + ratio * chartHeight;
+              return (
+                <line
+                  key={ratio}
+                  x1={padding.left}
+                  y1={y}
+                  x2={padding.left + chartWidth}
+                  y2={y}
+                  stroke="rgba(255, 255, 255, 0.1)"
+                  strokeWidth="1"
+                />
+              );
+            })}
+
+            {/* X-axis labels (óránként) */}
+            {intervals
+              .filter((_, idx) => {
+                // Óránkénti címkék: 60 / intervalMinutes intervallumonként
+                const intervalsPerHour = 60 / intervalMinutes;
+                return idx % intervalsPerHour === 0;
+              })
+              .map((interval, idx) => {
+                const intervalsPerHour = 60 / intervalMinutes;
+                const x = padding.left + idx * intervalsPerHour * stepX + stepX / 2;
+                return (
+                  <text
+                    key={interval.time}
+                    x={x}
+                    y={height - padding.bottom + 20}
+                    fill="white"
+                    fontSize="12"
+                    textAnchor="middle"
+                  >
+                    {interval.time}
+                  </text>
+                );
+              })}
+
+            {/* Y-axis labels */}
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+              const y = padding.top + ratio * chartHeight;
+              const value = Math.round(maxCount - ratio * countRange);
+              return (
+                <g key={ratio}>
+                  <line
+                    x1={padding.left - 5}
+                    y1={y}
+                    x2={padding.left}
+                    y2={y}
+                    stroke="rgba(255, 255, 255, 0.3)"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={padding.left - 10}
+                    y={y + 4}
+                    fill="white"
+                    fontSize="11"
+                    textAnchor="end"
+                  >
+                    {value}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Vonaldiagram */}
+            <path
+              d={pathData}
+              fill="none"
+              stroke="#28a745"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Invisible hover areas - érték hover-re jelenik meg */}
+            {points.map((point, idx) => {
+              const hoverAreaSize = stepX * 0.8; // Hover zóna szélessége
+              const isHovered = hoveredWorkloadPoint === idx;
+              return (
+                <g key={idx}>
+                  {/* Invisible hover area */}
+                  <rect
+                    x={point.x - hoverAreaSize / 2}
+                    y={padding.top}
+                    width={hoverAreaSize}
+                    height={chartHeight}
+                    fill="transparent"
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={() => setHoveredWorkloadPoint(idx)}
+                    onMouseLeave={() => setHoveredWorkloadPoint(null)}
+                  />
+                  {/* Tooltip - csak hover-re látható */}
+                  {isHovered && point.count > 0 && (
+                    <g>
+                      {/* Pont a vonalon */}
+                      <circle
+                        cx={point.x}
+                        cy={point.y}
+                        r="5"
+                        fill={getColor(point.count)}
+                        stroke="white"
+                        strokeWidth="2"
+                      />
+                      {/* Tooltip háttér */}
+                      <rect
+                        x={point.x - 50}
+                        y={point.y - 35}
+                        width="100"
+                        height="25"
+                        fill="rgba(0, 0, 0, 0.9)"
+                        stroke="white"
+                        strokeWidth="1"
+                        rx="4"
+                      />
+                      {/* Tooltip szöveg */}
+                      <text
+                        x={point.x}
+                        y={point.y - 18}
+                        fill="white"
+                        fontSize="12"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                      >
+                        {point.time}: {point.count}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Címkék */}
+            <text
+              x={width / 2}
+              y={padding.top - 10}
+              fill="white"
+              fontSize="16"
+              fontWeight="bold"
+              textAnchor="middle"
+            >
+              Actions per set minutes
+            </text>
+            <text
+              x={padding.left - 30}
+              y={height / 2}
+              fill="white"
+              fontSize="14"
+              textAnchor="middle"
+              transform={`rotate(-90, ${padding.left - 30}, ${height / 2})`}
+            >
+              Action count
+            </text>
+          </svg>
+        </div>
+      );
+    } catch (error) {
+      return <div style={{ color: 'white', padding: '20px', textAlign: 'center' }}>Error loading workload chart</div>;
+    }
+  })()}
 </Section>
 	  
 	  
